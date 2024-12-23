@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kalakshetra Dance Competition - Audience Registration</title>
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/Style/style.css" />
+    <style>
+      body {
+        background-image: linear-gradient(
+            rgba(0, 0, 0, 0.5),
+            rgba(0, 0, 0, 0.848)
+          ),
+          url("/Pictures/Baratham_Pic3.jpg");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+        min-height: 80vh;
+      }catysbuerainfdsd
+      h1 {
+        color: var(--text-color);
+        font-weight: bold;
+      }
+      h2 {
+        color: #f5f0ed;
+        padding-bottom: 35px;
+        font-weight: bold;
+      }
+      .container {
+        width: 60%; /* Set the width to 60% */
+        max-width: 1000px; /* You can keep this if you want a maximum width */
+        height: 60%;
+        max-height: 1000px;
+        background-color: var(--card-bg);
+        border-radius: 25px;
+        padding: 4rem; /* Increased padding */
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+        margin-top: 60px;
+      }
+      .form-control {
+        background-color: rgba(47, 51, 57, 0.8);
+        color: white;
+        border: 1px solid rgba(72, 68, 68, 0.5);
+      }
+      .form-control:focus {
+        background-color: #3e444d;
+        border-color: #d2a679;
+        box-shadow: none;
+        color: white;
+      }
+      label {
+        color: #d9d7d7;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-dark fixed">
+      <a class="navbar-brand" href="/Views/Home/test-index.html"
+        >Kalakshetra 6.0</a
+      >
+      <button
+        class="navbar-toggler"
+        type="button"
+        data-toggle="collapse"
+        data-target="#navbarNav"
+      >
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="/"
+              >About</a
+            >
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/registration"
+              >Participants</a
+            >
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/Views/Merchandise/4.merchandise.html"
+              >Merchandise</a
+            >
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/Views/Audience/7.audience_regis.html"
+              >Ticket</a
+            >
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/Views/Home/test-index.html#faq">FAQ</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/Views/Home/test-index.html#contact"
+              >Contact</a
+            >
+          </li>
+          <li class="nav-item">
+            <a href="/Views/Admin/adminpage.html" class="btn btn-custom1"
+              ><strong>ADMIN LOGIN</strong></a
+            >
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <div class="container mt-5">
+      <h1 class="text-center">Kalakshetra 6.0</h1>
+      <h2 class="text-center">Ticket</h2>
+
+      <form id="registration">
+        <div class="form-group">
+          <label for="fullName">Full Name</label>
+          <input type="text" class="form-control" id="fullName" required />
+        </div>
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input type="email" class="form-control" id="email" required />
+        </div>
+        <div class="form-group">
+          <label for="phone">Phone Number</label>
+          <input type="tel" class="form-control" id="phone" required />
+        </div>
+        <div class="form-group">
+          <label for="numberOfTickets">Number of Tickets</label>
+          <input
+            type="number"
+            class="form-control"
+            id="numberOfTickets"
+            min="1"
+            max="10"
+            required
+          />
+        </div>
+        <div class="text-center">
+          <button type="submit" class="btn btn-primary">Register</button>
+        </div>
+      </form>
+    </div>
+
+    <script>
+      document
+        .getElementById("registration")
+        .addEventListener("submit", function (event) {
+          event.preventDefault();
+
+          // Get form values
+          const name = document.getElementById("fullName").value;
+          const email = document.getElementById("email").value;
+          const phone = document.getElementById("phone").value;
+          const numberOfTickets =
+            document.getElementById("numberOfTickets").value;
+
+          // Create audience record
+          const audienceRecord = {
+            name: name,
+            email: email,
+            phone: phone,
+            tickets: numberOfTickets,
+          };
+
+          // Get existing audience records
+          const existingAudience = JSON.parse(
+            localStorage.getItem("audience") || "[]"
+          );
+
+          // Add new record
+          existingAudience.push(audienceRecord);
+
+          // Save back to localStorage
+          localStorage.setItem("audience", JSON.stringify(existingAudience));
+
+          // Redirect to payment page
+          const paymentPage = `9.payment_ad.html?name=${encodeURIComponent(
+            name
+          )}&email=${encodeURIComponent(email)}&phone=${encodeURIComponent(
+            phone
+          )}&numberOfTickets=${numberOfTickets}`;
+          window.location.href = paymentPage;
+        });
+
+
+    
+    </script>
+  </body>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.7/dist/umd/popper.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.min.js"></script>
+
+</html>

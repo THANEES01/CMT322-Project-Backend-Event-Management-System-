@@ -14,18 +14,13 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 // Serve static files
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static('Public')); // Notice the capital 'P' to match your folder structure
 
 // Routes
 app.get('/', (req, res) => {
     res.render('Home/landing', {
-        title: 'Kalakshetra 6.0 - Dance Showdown',
-        eventName: 'Kalakshetra 6.0',
-        eventDate: 'May 5th, 2024',
-        eventVenue: 'Dewan Budaya, USM',
-        prizePool: 'RM37,500',
-        ticketPrice: 'RM5',
-        galleryImages: [
+        galleryImages: 
+        [
             { src: '/Pictures/Baratham_Picture1.jpg', alt: 'Dance Performance 1' },
             { src: '/Pictures/Baratham_Pic2.jpg', alt: 'Dance Performance 2' },
             { src: '/Pictures/Baratham_Pic3.jpg', alt: 'Dance Performance 3' }
@@ -44,32 +39,26 @@ app.get('/', (req, res) => {
                 answer: 'Yes, participants must be at least 18 years old to join the competition.'
             }
         ],
-        sponsors: [
-            { logo: '/Pictures/usm_logo(updated).jpg', name: 'USM APEX Logo' },
-            { logo: '/Pictures/persatuan_baratham_logo.jpg', name: 'Persatuan Baratham Logo' }
-        ],
         socialLinks: [
             { platform: 'facebook', url: 'https://www.facebook.com/USMOfficial1969' },
             { platform: 'instagram', url: 'https://www.instagram.com/pki_usm_induk/' }
         ],
-        email: 'kalakshetra@usm.my',
-        phone: '+60 12-345 6789 (Mr Yogan)'
     });
 });
 
 // Participant routes
-// app.get('/registration', (req, res) => {
-//   res.render('participant/registration');
-// });
+app.get('/registration', (req, res) => {
+  res.render('participant/registration');
+});
+
+// Audience routes
+app.get('/tickets', (req, res) => {
+  res.render('Audience/a_registration');
+});
 
 // // Merchandise routes
 // app.get('/merchandise', (req, res) => {
 //   res.render('merchandise/merchandise');
-// });
-
-// // Audience routes
-// app.get('/tickets', (req, res) => {
-//   res.render('audience/audience_regis');
 // });
 
 // // Admin routes

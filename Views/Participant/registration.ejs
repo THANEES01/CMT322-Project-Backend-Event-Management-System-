@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Participant Registration</title>
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/Style/style.css" /> 
+</head>
+
+<style>
+
+  body {
+    background-image:linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.848)),url("/Pictures/Baratham_Pic3.jpg"); 
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    min-height: 80vh;
+  }
+  
+  .container {
+    /* background-color: rgba(15, 52, 96, 0.95); */
+    background-color: rgba(16, 29, 44, 0.95);
+    border-radius: 25px;
+    padding: 50px ; /* Increased padding */
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    margin-top: 60px;    
+  }
+
+  .form-title {
+    text-align: center;
+    margin-top: 20px;
+    color: var(--text-color);
+    font-weight: bold;
+  }
+
+  .form-subtitle {
+    font-size: 1.1em;
+    font-weight: bold;
+    padding: 1rem; /* Increased padding */
+    margin-bottom: 2rem; /* Added bottom margin */
+    background-color: rgba(255, 69, 0, 0.1);
+    border-radius: 5px;
+    color: var(--text-color);
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-control {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+  }
+
+  .form-control:focus {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-color: var(--hover-color);
+    color: white;
+    box-shadow: 0 0 0 0.2rem rgba(255, 69, 0, 0.25);
+  }
+
+  .form-control::-webkit-input-placeholder {
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .card {
+    background-color: var(--secondary-color);
+    margin-bottom: 20px;
+  }
+
+  .card-body {
+    color: white;
+    padding: 1.5rem; 
+  }
+
+  .card-title {
+    color: #FF4500;
+  }
+
+  .btn-info {
+    background-color: #8B1F2F;
+    border-color: #8B1F2F;
+    padding: 8px 20px;
+    transition: all 0.3s ease;
+  }
+
+  .btn-info:hover {
+    background-color: #6b1824;
+    border-color: #6b1824;
+    transform: translateY(-2px);
+  }
+
+  .btn-danger {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    transition: all 0.3s ease;
+  }
+
+  .btn-danger:hover {
+    background-color: #bd2130;
+    border-color: #bd2130;
+  }
+
+  label {
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+
+  select option {
+    background-color: #1A1A1A;
+    color: white;
+  }
+
+  .is-invalid {
+    border-color: #dc3545;
+  }
+
+  .text-center {
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  /*Admin Login button*/
+  .btn-custom1 {
+    background-color: var(--primary-color);
+    color: var(--text-color);
+    transition: all 0.3s ease;
+    border-radius: 25px;
+    margin-left: 1.25rem; /* Added margin to separate from nav items */
+    padding: 0.5rem 1rem; /* Added padding to the button */
+  }
+
+  .btn-custom1:hover {
+    background-color: var(--hover-color);
+    border-color: var(--hover-color);
+    transform: scale(1.05);
+  }
+
+#participant-fields {
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .row {
+    margin-bottom: 1rem; /* Added space between rows */
+  }
+
+  .card-title {
+    margin-bottom: 1.5rem; /* Added space after card title */
+  }
+
+  /* Added space for the buttons section */
+  #group-controls {
+    margin: 2rem 0;
+  }
+
+  .text-center.mt-4 {
+    margin-top: 3rem !important; /* Increased top margin for submit button */
+  }
+</style>
+
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark fixed">
+    <a class="navbar-brand" href="/Views/Home/test-index.html#">Kalakshetra 6.0</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="/">About</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/registration">Participants</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/Views/Merchandise/4.merchandise.html">Merchandise</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/tickets">Ticket</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/Views/Home/test-index.html#faqSection">FAQ</a> 
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/Views/Home/test-index.html#contact">Contact</a>
+        </li>
+        <li class="nav-item">
+          <a href="/Views/Admin/adminpage.html" class="btn btn-custom1"><strong>ADMIN LOGIN</strong></a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+
+  <div class="container mt-5 pt-5">
+    <h2 class="form-title">Participant Registration Form</h2>
+    <p class="text-center">Please fill the form below keenly</p>
+    <br>
+    <form id="registration-form">
+      <div class="form-group mt-3">
+        <label for="team-name">Team Name</label>
+        <input type="text" class="form-control" id="team-name" name="team-name" required>
+      </div>
+
+      <div class="form-group mt-3">
+        <label for="category">Category</label>
+        <select class="form-control" id="category" name="category" required>
+          <option value="">Select Category</option>
+          <option value="dance_individual">Individual</option>
+          <option value="dance_group">Group</option>
+        </select>
+      </div>
+
+      <div id="participant-fields"></div>
+
+      <div id="group-controls" style="display: none;" class="text-center mt-3">
+        <button type="button" class="btn btn-info" id="add-member">Add Team Member</button>
+      </div>
+
+      <div class="text-center mt-4">
+        <button type="button" class="btn btn-primary" id="submit-button">Submit & Proceed to Payment</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    let memberCount = 1;
+
+    document.getElementById('category').addEventListener('change', function() {
+      const participantFields = document.getElementById('participant-fields');
+      const groupControls = document.getElementById('group-controls');
+      participantFields.innerHTML = '';
+      memberCount = 1;
+
+      const isGroup = this.value === 'dance_group';
+      const title = isGroup ? 'Team Leader' : 'Participant';
+      
+      participantFields.appendChild(createParticipantCard(1, title));
+      groupControls.style.display = isGroup ? 'block' : 'none';
+    });
+
+    function createParticipantCard(index, title) {
+      const card = document.createElement('div');
+      card.classList.add('card', 'mb-3');
+      card.id = `member-card-${index}`;
+      
+      card.innerHTML = `
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title">${title}</h5>
+            ${index > 1 ? `<button type="button" class="btn btn-danger btn-sm" onclick="removeMember(${index})">Remove</button>` : ''}
+          </div>
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label for="name-${index}">Full Name</label>
+              <input type="text" class="form-control" id="name-${index}" name="name-${index}" required>
+            </div>
+            <div class="col-md-6 form-group">
+              <label for="matric-${index}">Matric Number</label>
+              <input type="text" class="form-control" id="matric-${index}" name="matric-${index}" required>
+            </div>
+            <div class="col-md-6 form-group">
+              <label for="email-${index}">Email</label>
+              <input type="email" class="form-control" id="email-${index}" name="email-${index}" required>
+            </div>
+            <div class="col-md-3 form-group">
+              <label for="gender-${index}">Gender</label>
+              <select class="form-control" id="gender-${index}" name="gender-${index}" required>
+                <option value="">Select Gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="col-md-3 form-group">
+              <label for="age-${index}">Age</label>
+              <input type="number" class="form-control" id="age-${index}" name="age-${index}" required>
+            </div>
+          </div>
+        </div>
+      `;
+      return card;
+    }
+
+    document.getElementById('add-member').addEventListener('click', function() {
+      memberCount++;
+      if (memberCount <= 5) {
+        const participantFields = document.getElementById('participant-fields');
+        participantFields.appendChild(createParticipantCard(memberCount, `Team Member ${memberCount}`));
+      }
+      if (memberCount === 5) {
+        this.style.display = 'none';
+      }
+    });
+
+    function removeMember(index) {
+      const card = document.getElementById(`member-card-${index}`);
+      card.remove();
+      memberCount--;
+      document.getElementById('add-member').style.display = 'block';
+    }
+
+    document.getElementById('submit-button').addEventListener('click', function() {
+      if (!validateForm()) {
+        return;
+      }
+
+      const category = document.getElementById('category').value;
+      const teamName = document.getElementById('team-name').value;
+      const isGroup = category === 'dance_group';
+      
+      let registrations = JSON.parse(localStorage.getItem('registrations') || '[]');
+      
+      const participants = [];
+      for (let i = 1; i <= memberCount; i++) {
+        participants.push({
+          name: document.getElementById(`name-${i}`).value,
+          matric: document.getElementById(`matric-${i}`).value,
+          email: document.getElementById(`email-${i}`).value,
+          gender: document.getElementById(`gender-${i}`).value,
+          age: document.getElementById(`age-${i}`).value
+        });
+      }
+      
+      const registration = {
+        id: registrations.length + 1,
+        teamName: teamName,
+        category: isGroup ? 'Group' : 'Individual',
+        participants: participants,
+        status: 'Pending',
+        timestamp: new Date().toISOString()
+      };
+      
+      registrations.push(registration);
+      localStorage.setItem('registrations', JSON.stringify(registrations));
+      
+      const fee = isGroup ? 50 : 10;
+      window.location.href = `3.payment.html?fee=${fee}`;
+    });
+
+    function validateForm() {
+      const form = document.getElementById('registration-form');
+      const inputs = form.querySelectorAll('input, select');
+      let isValid = true;
+
+      inputs.forEach(input => {
+        if (input.hasAttribute('required') && !input.value) {
+          input.classList.add('is-invalid');
+          isValid = false;
+        } else {
+          input.classList.remove('is-invalid');
+        }
+      });
+
+      if (!isValid) {
+        alert('Please fill in all required fields.');
+      }
+      return isValid;
+    }
+  </script>
+</body>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.7/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</html>
