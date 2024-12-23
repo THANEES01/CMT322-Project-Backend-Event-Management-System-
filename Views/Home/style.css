@@ -1,0 +1,139 @@
+:root {
+    --primary-color: #990000;
+    --secondary-color: #1A1A2E;
+    --text-color: #fff;
+    --card-bg: rgba(16, 29, 44, 0.95);
+    --hover-color: #FF3D5A;
+    --heading-font: 'Montserrat', sans-serif;
+    --body-font: 'Poppins', sans-serif;
+  }
+  
+  body {
+      background-color: var(--secondary-color);
+      color: var(--text-color);
+      font-family: var(--body-font);
+  }
+  
+  .navbar {
+    background-color: var(--secondary-color);
+    border-bottom: 1px solid var(--primary-color);
+    padding: 0.5rem 1rem; /* Adjusted padding for better spacing */
+  }
+  
+  .navbar-brand {
+    color: var(--text-color);
+    font-weight: 700;
+    font-size: 1.5rem;
+    font-family: var(--heading-font);
+    letter-spacing: 1px;
+  }
+  
+  .navbar-collapse {
+    background-color: var(--secondary-color);
+    border-radius: 10px;
+    padding: 0.5rem;
+    text-align: center;
+    /* button-align: center; */
+  }
+  
+  .navbar-nav .nav-item .nav-link {
+    color: var(--text-color);
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    text-transform: uppercase; /* Added for a more uniform look */
+    font-family: var(--heading-font);
+    letter-spacing: 0.5px;
+  }
+  
+  .navbar-nav .nav-item .nav-link:hover {
+    color: var(--hover-color);
+  }
+  
+  .navbar-toggler {
+    color: var(--text-color);
+    border: none;
+    background-color: transparent;
+    position: absolute;
+    top: 0.5rem; /* Adjust as needed */
+    right: 1rem; /* Adjust as needed */
+  }
+  
+  .navbar-toggler:focus {
+    outline: none;
+    box-shadow: none;
+  }
+  
+  .navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke='rgba%28255, 255, 255, 0.5%29' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E");
+  }
+  
+  @media (min-width: 992px) {
+    .navbar-nav {
+      flex-direction: row;
+      background-color: transparent;
+      padding: 0;
+    }
+  }
+  
+  .card {
+      background-color: var(--card-bg);
+      border: none;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+      border-radius: 20px;
+      color: var(--text-color);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      text-align: center;
+      padding: 1rem;
+  }
+  
+  .card:hover {
+    transform: scale(1.02);
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.5);
+  }
+  
+  .card-body {
+    padding: 25px;
+  }
+  
+  .btn-primary {
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
+      transition: all 0.3s ease;
+      border-radius: 25px;
+      padding: 12px 25px;
+      font-weight: bold;
+  }
+  
+  .btn-primary:hover {
+      background-color: var(--hover-color);
+      border-color: var(--hover-color);
+      transform: scale(1.05);
+  }
+  
+  .section-title {
+    color: var(--text-color);
+    border-bottom: 3px solid var(--primary-color);
+    padding-bottom: 10px;
+    margin-bottom: 30px;
+    text-shadow: 1px 1px 2px rgba(100, 100, 100, 0.34);
+    font-family: var(--heading-font);
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+  
+  /* Admin Login button */
+  .btn-custom1 {
+    background-color: var(--primary-color);
+    color: var(--text-color);
+    transition: all 0.3s ease;
+    border-radius: 25px;
+    /*margin-left: 1.25rem;  Added margin to separate from nav items */
+    /* padding: 0.5rem 1rem; Added padding to the button */
+    position: relative;
+  }
+  
+  .btn-custom1:hover {
+    background-color: var(--hover-color);
+    border-color: var(--hover-color);
+    transform: scale(1.05);
+  }
