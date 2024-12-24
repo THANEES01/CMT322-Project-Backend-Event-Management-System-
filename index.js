@@ -8,7 +8,6 @@ import { fileURLToPath } from 'url';
 
 dotenv.config();
 
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -64,6 +63,150 @@ app.get('/registration', (req, res) => {
   res.render('participant/registration');
 });
 
+//Handle post request submisson for participant registration
+app.post('/participant/register', async (req, res) => {
+    try {
+        console.log('Received registration data:', req.body);
+
+        const { teamName, category, participants } = req.body;
+        
+        // Calculate total amount based on category
+        const totalAmount = category === 'group' ? 50 : 10;
+        
+        // Generate transaction ID
+        const transactionId = 'TXN' + Date.now();
+
+        // Start database transaction
+        const client = await pool.connect();
+        
+        try {
+            await client.query('BEGIN');
+
+            // Insert main registration record
+            const registrationResult = await client.query(
+                `INSERT INTO participant_registration 
+                (team_name, category, transaction_id, total_amount) 
+                VALUES ($1, $2, $3, $4) 
+                RETURNING id`,
+                [teamName, category, transactionId, totalAmount]
+            );
+
+            const registrationId = registrationResult.rows[0].id;
+
+            // Insert participants
+            for (let i = 0; i < participants.length; i++) {
+                const p = participants[i];
+                await client.query(
+                    `INSERT INTO participant_details 
+                    (registration_id, full_name, matric_number, email, gender, age, is_leader) 
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                    [registrationId, p.name, p.matric, p.email, p.gender, p.age, i === 0]
+                );
+            }
+
+            await client.query('COMMIT');
+
+            // Send success response with payment URL
+            res.status(201).json({
+                success: true,
+                message: 'Registration successful',
+                data: {
+                    redirectUrl: `/participant/payment?registrationId=${registrationId}&amount=${totalAmount}`
+                }
+            });
+
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
+
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Registration failed. Please try again.',
+            error: error.message
+        });
+    }
+});
+
+// Get participants registration details
+app.get('/registration/:id', async (req, res) => {
+    try {
+        const registrationId = req.params.id;
+        
+        // Get registration details
+        const registrationResult = await pool.query(
+            `SELECT * FROM participant_registration WHERE id = $1`,
+            [registrationId]
+        );
+
+        // Get participants details
+        const participantsResult = await pool.query(
+            `SELECT * FROM participant_details WHERE registration_id = $1 ORDER BY is_leader DESC`,
+            [registrationId]
+        );
+
+        if (registrationResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Registration not found' });
+        }
+
+        res.json({
+            registration: registrationResult.rows[0],
+            participants: participantsResult.rows
+        });
+
+    } catch (error) {
+        console.error('Error fetching registration:', error);
+        res.status(500).json({ message: 'Error fetching registration details' });
+    }
+});
+
+// Participant payment route
+app.get('/participant/payment', async (req, res) => {
+    try {
+        const { registrationId, amount } = req.query;
+
+        // Create payment intent with Stripe
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: amount * 100, // Convert to cents
+            currency: 'myr',
+            metadata: {
+                registrationId,
+                type: 'participant_registration'
+            }
+        });
+
+        // Get registration details
+        const result = await pool.query(
+            `SELECT pr.*, pd.full_name, pd.email 
+             FROM participant_registration pr 
+             JOIN participant_details pd ON pr.id = pd.registration_id 
+             WHERE pr.id = $1 AND pd.is_leader = true`,
+            [registrationId]
+        );
+
+        const registration = result.rows[0];
+
+        res.render('participant/payment', {
+            registrationId,
+            amount,
+            teamName: registration.team_name,
+            leaderName: registration.full_name,
+            email: registration.email,
+            stripePublicKey: process.env.STRIPE_PUBLIC_KEY,
+            clientSecret: paymentIntent.client_secret
+        });
+
+    } catch (error) {
+        console.error('Payment setup error:', error);
+        res.status(500).send('Error setting up payment');
+    }
+});
+
+
 // Audience routes
 app.get('/tickets', (req, res) => {
     res.render('Audience/a_registration', {
@@ -113,7 +256,7 @@ app.post('/api/audience/register', async (req, res) => {
     }
 });
 
-// Payment routes
+// Payment routes for audience
 app.get('/payment_ad', async (req, res) => {
     try {
         const { name, email, phone, numberOfTickets } = req.query;
@@ -154,7 +297,7 @@ app.get('/payment_ad', async (req, res) => {
     }
 });
 
-// Handle successful payment
+// Handle successful payment for audience
 app.get('/payment-success', async (req, res) => {
     try {
         console.log('Success page accessed with query params:', req.query);
@@ -206,7 +349,7 @@ app.get('/payment-success', async (req, res) => {
     }
 });
 
-// Payment failed route
+// Payment failed route for audience
 app.get('/payment-failed', (req, res) => {
     res.render('Audience/payment-failed', {
         message: 'Payment was unsuccessful. Please try again.',
