@@ -181,97 +181,98 @@
 
 
         <script>
-             // Initialize Stripe with your public key
-             console.log('Initializing Stripe with public key:', '<%= stripePublicKey %>');
-    const stripe = Stripe('<%= stripePublicKey %>');
-    
-    // Create elements instance
-    const elements = stripe.elements();
-    console.log('Elements created');
+              // Initialize Stripe
+   console.log('Stripe Key:', '<%= stripePublicKey %>'); 
+   const stripe = Stripe('<%= stripePublicKey %>');
+   console.log('Stripe Object:', stripe);
 
-    // Create card element
-    const cardElement = elements.create('card', {
-        style: {
-            base: {
-                color: '#ffffff',
-                fontFamily: '"Poppins", sans-serif',
-                fontSmoothing: 'antialiased',
-                fontSize: '16px',
-                backgroundColor: 'transparent',
-                '::placeholder': {
-                    color: '#aab7c4'
-                }
-            },
-            invalid: {
-                color: '#fa755a',
-                iconColor: '#fa755a'
-            }
-        },
-        hidePostalCode: true
-    });
+   // Create elements instance
+   const elements = stripe.elements();
+   console.log('Elements created');
 
-    console.log('Card element created');
-    
-    // Mount card element
-    const cardContainer = document.getElementById('card-element');
-    cardElement.mount(cardContainer);
-    console.log('Card element mounted');
+   // Create card element
+   const cardElement = elements.create('card', {
+       style: {
+           base: {
+               color: '#ffffff',
+               fontFamily: '"Poppins", sans-serif',
+               fontSmoothing: 'antialiased',
+               fontSize: '16px',
+               backgroundColor: 'transparent',
+               '::placeholder': {
+                   color: '#aab7c4'
+               }
+           },
+           invalid: {
+               color: '#fa755a',
+               iconColor: '#fa755a'
+           }
+       },
+       hidePostalCode: true
+   });
 
-    cardElement.on('change', (event) => {
-        console.log('Card element change:', event);
-        const displayError = document.getElementById('card-errors');
-        if (event.error) {
-            displayError.textContent = event.error.message;
-        } else {
-            displayError.textContent = '';
-        }
-    });
+   console.log('Card element created');
+   
+   // Mount card element
+   const cardContainer = document.getElementById('card-element');
+   cardElement.mount(cardContainer);
+   console.log('Card element mounted');
 
-    const form = document.getElementById('payment-form');
-    form.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const submitButton = document.getElementById('submit-button');
-        
-        try {
-            submitButton.disabled = true;
-            submitButton.textContent = 'Processing...';
-            
-            console.log('Creating payment method...');
-            const { paymentMethod, error: paymentMethodError } = await stripe.createPaymentMethod({
-                type: 'card',
-                card: cardElement,
-                billing_details: {
-                    name: '<%= name %>',
-                    email: '<%= email %>'
-                }
-            });
+   // Handle validation errors
+   cardElement.on('change', (event) => {
+       console.log('Card element change:', event);
+       const displayError = document.getElementById('card-errors');
+       if (event.error) {
+           displayError.textContent = event.error.message;
+       } else {
+           displayError.textContent = '';
+       }
+   });
 
-            if (paymentMethodError) {
-                throw paymentMethodError;
-            }
+   const form = document.getElementById('payment-form');
+   const submitButton = document.getElementById('submit-button');
+   const paymentStatus = document.getElementById('payment-status');
 
-            console.log('Confirming payment...');
-            const { error: confirmError } = await stripe.confirmCardPayment('<%= clientSecret %>', {
-                payment_method: paymentMethod.id
-            });
+   form.addEventListener('submit', async (event) => {
+       event.preventDefault();
+       submitButton.disabled = true;
+       submitButton.textContent = 'Processing Payment...';
+       
+       try {
+           // Confirm the payment
+           const { paymentIntent, error } = await stripe.confirmCardPayment('<%= clientSecret %>', {
+               payment_method: {
+                   card: cardElement,
+                   billing_details: {
+                       name: '<%= name %>',
+                       email: '<%= email %>'
+                   }
+               }
+           });
 
-            if (confirmError) {
-                throw confirmError;
-            }
-            else {
-            // Payment successful
-            console.log('Payment successful!');
-            window.location.href = '/payment-success';
-            }
+           if (error) {
+               throw error;
+           }
 
-        } catch (error) {
-            console.error('Payment error:', error);
-            const errorElement = document.getElementById('card-errors');
-            errorElement.textContent = error.message;
-            submitButton.disabled = false;
-            submitButton.textContent = 'Pay RM <%= totalAmount %>';
-        }
-    });
+           if (paymentIntent.status === 'succeeded') {
+               paymentStatus.textContent = 'Payment successful! Redirecting...';
+               paymentStatus.className = 'payment-status success';
+               paymentStatus.style.display = 'block';
+
+               // Include the payment intent ID in the redirect URL
+               window.location.href = `/payment-success?payment_intent=${paymentIntent.id}&status=${paymentIntent.status}`;
+           }
+
+       } catch (error) {
+           console.error('Payment error:', error);
+           paymentStatus.textContent = error.message;
+           paymentStatus.className = 'payment-status error';
+           paymentStatus.style.display = 'block';
+           
+           submitButton.disabled = false;
+           submitButton.textContent = 'Pay RM <%= totalAmount %>';
+       }
+   });
         </script>
 </body>
 </html>

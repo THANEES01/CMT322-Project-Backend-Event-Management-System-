@@ -115,17 +115,17 @@ app.post('/api/audience/register', async (req, res) => {
 
 // Payment routes
 app.get('/payment_ad', async (req, res) => {
-    const { name, email, phone, numberOfTickets } = req.query;
-    const totalAmount = numberOfTickets * 5;
-
     try {
-        // Create a payment intent with Stripe
+        const { name, email, phone, numberOfTickets } = req.query;
+        const totalAmount = parseInt(numberOfTickets) * 5;
+
+        console.log('Creating payment intent for:', { name, email, totalAmount });
+
+        // Create a payment intent
         const paymentIntent = await stripe.paymentIntents.create({
-            amount: totalAmount * 100, // Convert to cents
+            amount: Math.round(totalAmount * 100), // convert to cents
             currency: 'myr',
-            automatic_payment_methods: {
-                enabled: true,
-            },
+            payment_method_types: ['card'],
             metadata: {
                 name,
                 email,
@@ -134,7 +134,10 @@ app.get('/payment_ad', async (req, res) => {
             }
         });
 
-        // Render payment page with client secret
+        console.log('Payment intent created:', paymentIntent.id);
+        console.log('Client secret:', paymentIntent.client_secret);
+
+        // Render the payment page
         res.render('Audience/payment_ad', {
             name,
             email,
@@ -144,50 +147,62 @@ app.get('/payment_ad', async (req, res) => {
             stripePublicKey: process.env.STRIPE_PUBLIC_KEY,
             clientSecret: paymentIntent.client_secret
         });
+
     } catch (error) {
-        console.error('Error:', error);
-        res.status(500).send('Error initializing payment');
+        console.error('Payment setup error:', error);
+        res.status(500).send('Error setting up payment: ' + error.message);
     }
 });
 
 // Handle successful payment
 app.get('/payment-success', async (req, res) => {
     try {
-        const { payment_intent, payment_intent_client_secret } = req.query;
+        console.log('Success page accessed with query params:', req.query);
+        const { payment_intent, status } = req.query;
 
-        // Verify the payment with Stripe
+        if (!payment_intent) {
+            throw new Error('No payment information provided');
+        }
+
+        // Retrieve payment intent from Stripe
         const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent);
-        
+        console.log('Retrieved payment intent:', paymentIntent);
+
         if (paymentIntent.status === 'succeeded') {
-            // Update payment status in database
-            await pool.query(
-                'UPDATE audience_registration SET payment_status = $1 WHERE transaction_id = $2',
-                ['completed', paymentIntent.metadata.transactionId]
-            );
+            // Update database
+            try {
+                await pool.query(
+                    'UPDATE audience_registration SET payment_status = $1 WHERE email = $2',
+                    ['completed', paymentIntent.metadata.email]
+                );
 
-            // Get user details from database
-            const result = await pool.query(
-                'SELECT * FROM audience_registration WHERE transaction_id = $1',
-                [paymentIntent.metadata.transactionId]
-            );
+                // Fetch updated user details
+                const result = await pool.query(
+                    'SELECT * FROM audience_registration WHERE email = $1 ORDER BY registration_date DESC LIMIT 1',
+                    [paymentIntent.metadata.email]
+                );
 
-            const userDetails = result.rows[0];
+                const userDetails = result.rows[0];
 
-            // Render success page with all necessary details
-            res.render('Audience/payment-success', {
-                name: userDetails.full_name,
-                email: userDetails.email,
-                phone: userDetails.phone_number,
-                numberOfTickets: userDetails.number_of_tickets,
-                totalAmount: paymentIntent.amount / 100,
-                transactionId: userDetails.transaction_id
-            });
+                // Render success page
+                res.render('Audience/payment-success', {
+                    name: userDetails.full_name,
+                    email: userDetails.email,
+                    phone: userDetails.phone_number,
+                    numberOfTickets: userDetails.number_of_tickets,
+                    totalAmount: paymentIntent.amount / 100,
+                    transactionId: payment_intent
+                });
+            } catch (dbError) {
+                console.error('Database error:', dbError);
+                throw new Error('Failed to update payment records');
+            }
         } else {
-            res.redirect('/payment-failed');
+            throw new Error('Payment was not successful');
         }
     } catch (error) {
         console.error('Payment verification error:', error);
-        res.redirect('/payment-failed');
+        res.redirect(`/payment-failed?error=${encodeURIComponent(error.message)}`);
     }
 });
 
