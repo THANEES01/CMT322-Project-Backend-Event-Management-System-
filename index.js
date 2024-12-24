@@ -1,18 +1,22 @@
 // app.js or index.js
+import * as dotenv from 'dotenv';
 import express from 'express';
 import Stripe from 'stripe';
 import pool from './db.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+dotenv.config();
+
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-
+const port = process.env.PORT;
 
 const app = express();
-const stripe = Stripe('sk_test_51QZBkOLttFatrRNIkMlbUKVwpNYCtq3TBZSb1qKwA3HxUMGadIx0yk066wvpNYeH88RkQPjKgBlvwkQsEU88kL0Q0090ZDMqnH');
-const port = 3000;
+//Used this for stripe payment gateway (it's from .env file)
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 //Add these middleware before your routes
 app.use(express.json());
@@ -111,45 +115,47 @@ app.post('/api/audience/register', async (req, res) => {
 
 // Payment routes
 app.get('/payment_ad', async (req, res) => {
-    const { name, email, phone, numberOfTickets, transactionId } = req.query;
-    const totalAmount = numberOfTickets * 5; // RM5 per ticket
+    const { name, email, phone, numberOfTickets } = req.query;
+    const totalAmount = numberOfTickets * 5;
 
     try {
-        // Create a PaymentIntent with Stripe
+        // Create a payment intent with Stripe
         const paymentIntent = await stripe.paymentIntents.create({
-            amount: totalAmount * 100, // Stripe expects amounts in cents
+            amount: totalAmount * 100, // Convert to cents
             currency: 'myr',
+            automatic_payment_methods: {
+                enabled: true,
+            },
             metadata: {
                 name,
                 email,
                 phone,
-                numberOfTickets,
-                transactionId
+                numberOfTickets
             }
         });
 
-        // Render the payment page
+        // Render payment page with client secret
         res.render('Audience/payment_ad', {
             name,
             email,
             phone,
             numberOfTickets,
             totalAmount,
-            transactionId,
             stripePublicKey: process.env.STRIPE_PUBLIC_KEY,
             clientSecret: paymentIntent.client_secret
         });
     } catch (error) {
-        console.error('Payment setup error:', error);
-        res.status(500).send('Error setting up payment. Please try again.');
+        console.error('Error:', error);
+        res.status(500).send('Error initializing payment');
     }
 });
 
 // Handle successful payment
 app.get('/payment-success', async (req, res) => {
-    const { payment_intent, payment_intent_client_secret } = req.query;
-
     try {
+        const { payment_intent, payment_intent_client_secret } = req.query;
+
+        // Verify the payment with Stripe
         const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent);
         
         if (paymentIntent.status === 'succeeded') {
@@ -159,13 +165,25 @@ app.get('/payment-success', async (req, res) => {
                 ['completed', paymentIntent.metadata.transactionId]
             );
 
+            // Get user details from database
+            const result = await pool.query(
+                'SELECT * FROM audience_registration WHERE transaction_id = $1',
+                [paymentIntent.metadata.transactionId]
+            );
+
+            const userDetails = result.rows[0];
+
+            // Render success page with all necessary details
             res.render('Audience/payment-success', {
-                name: paymentIntent.metadata.name,
-                email: paymentIntent.metadata.email,
-                numberOfTickets: paymentIntent.metadata.numberOfTickets
+                name: userDetails.full_name,
+                email: userDetails.email,
+                phone: userDetails.phone_number,
+                numberOfTickets: userDetails.number_of_tickets,
+                totalAmount: paymentIntent.amount / 100,
+                transactionId: userDetails.transaction_id
             });
         } else {
-            throw new Error('Payment was not successful');
+            res.redirect('/payment-failed');
         }
     } catch (error) {
         console.error('Payment verification error:', error);
@@ -173,6 +191,13 @@ app.get('/payment-success', async (req, res) => {
     }
 });
 
+// Payment failed route
+app.get('/payment-failed', (req, res) => {
+    res.render('Audience/payment-failed', {
+        message: 'Payment was unsuccessful. Please try again.',
+        error: req.query.error || 'An error occurred during payment processing.'
+    });
+});
 
 // // Merchandise routes
 // app.get('/merchandise', (req, res) => {

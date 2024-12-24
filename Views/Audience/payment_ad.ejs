@@ -54,10 +54,25 @@
         }
 
         #card-element {
-            background-color: rgba(47, 51, 57, 0.8);
+            background-color: rgba(47, 51, 57, 0.8) !important;
             padding: 15px;
             border-radius: 8px;
             border: 1px solid rgba(72, 68, 68, 0.5);
+            min-height: 45px;
+        }
+
+
+        .StripeElement {
+            width: 100%;
+            background-color: transparent !important;
+        }
+
+        .StripeElement--focus {
+             border-color: #d2a679;
+        }
+
+        .form-control {
+             background-color: transparent;
         }
 
         #card-element.StripeElement--focus {
@@ -151,105 +166,112 @@
         <form id="payment-form">
             <div class="form-group">
                 <label>Card Information</label>
-                <div id="card-element"></div>
+                <div id="card-element" class="form-control">
+                    <!-- Stripe Card Element will be inserted here -->
+                </div>
                 <div id="card-errors" role="alert"></div>
             </div>
             <button type="submit" class="btn btn-pay" id="submit-button">
                 Pay RM <%= totalAmount %>
             </button>
         </form>
+        
 
         <div class="payment-status" id="payment-status"></div>
-    </div>
 
-    <script>
-        // Initialize Stripe
-        const stripe = Stripe('<%= stripePublicKey %>');
-        const elements = stripe.elements();
 
-        // Customize the card element
-        const style = {
+        <script>
+             // Initialize Stripe with your public key
+             console.log('Initializing Stripe with public key:', '<%= stripePublicKey %>');
+    const stripe = Stripe('<%= stripePublicKey %>');
+    
+    // Create elements instance
+    const elements = stripe.elements();
+    console.log('Elements created');
+
+    // Create card element
+    const cardElement = elements.create('card', {
+        style: {
             base: {
                 color: '#ffffff',
                 fontFamily: '"Poppins", sans-serif',
                 fontSmoothing: 'antialiased',
                 fontSize: '16px',
+                backgroundColor: 'transparent',
                 '::placeholder': {
                     color: '#aab7c4'
-                },
-                ':-webkit-autofill': {
-                    color: '#ffffff',
                 }
             },
             invalid: {
-                color: '#ff6b6b',
-                iconColor: '#ff6b6b'
+                color: '#fa755a',
+                iconColor: '#fa755a'
             }
-        };
+        },
+        hidePostalCode: true
+    });
 
-        // Create and mount the card element
-        const card = elements.create('card', { style });
-        card.mount('#card-element');
+    console.log('Card element created');
+    
+    // Mount card element
+    const cardContainer = document.getElementById('card-element');
+    cardElement.mount(cardContainer);
+    console.log('Card element mounted');
 
-        // Handle real-time validation errors
-        card.addEventListener('change', ({error}) => {
-            const displayError = document.getElementById('card-errors');
-            if (error) {
-                displayError.textContent = error.message;
-            } else {
-                displayError.textContent = '';
-            }
-        });
+    cardElement.on('change', (event) => {
+        console.log('Card element change:', event);
+        const displayError = document.getElementById('card-errors');
+        if (event.error) {
+            displayError.textContent = event.error.message;
+        } else {
+            displayError.textContent = '';
+        }
+    });
 
-        // Handle form submission
-        const form = document.getElementById('payment-form');
+    const form = document.getElementById('payment-form');
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
         const submitButton = document.getElementById('submit-button');
-        const paymentStatus = document.getElementById('payment-status');
-
-        form.addEventListener('submit', async (event) => {
-            event.preventDefault();
-
-            // Disable the submit button and show loading state
+        
+        try {
             submitButton.disabled = true;
-            submitButton.textContent = 'Processing Payment...';
-
-            try {
-                const { paymentIntent, error } = await stripe.confirmPayment({
-                    elements,
-                    confirmParams: {
-                        return_url: window.location.origin + '/payment-success',
-                        payment_method_data: {
-                            billing_details: {
-                                name: '<%= name %>',
-                                email: '<%= email %>'
-                            }
-                        }
-                    }
-                });
-
-                if (error) {
-                    throw error;
+            submitButton.textContent = 'Processing...';
+            
+            console.log('Creating payment method...');
+            const { paymentMethod, error: paymentMethodError } = await stripe.createPaymentMethod({
+                type: 'card',
+                card: cardElement,
+                billing_details: {
+                    name: '<%= name %>',
+                    email: '<%= email %>'
                 }
+            });
 
-                // Payment successful
-                paymentStatus.textContent = 'Payment successful! Redirecting...';
-                paymentStatus.className = 'payment-status success';
-                paymentStatus.style.display = 'block';
-
-                // Redirect to success page
-                setTimeout(() => {
-                    window.location.href = '/payment-success';
-                }, 2000);
-
-            } catch (error) {
-                paymentStatus.textContent = error.message;
-                paymentStatus.className = 'payment-status error';
-                paymentStatus.style.display = 'block';
-                
-                submitButton.disabled = false;
-                submitButton.textContent = 'Pay RM <%= totalAmount %>';
+            if (paymentMethodError) {
+                throw paymentMethodError;
             }
-        });
-    </script>
+
+            console.log('Confirming payment...');
+            const { error: confirmError } = await stripe.confirmCardPayment('<%= clientSecret %>', {
+                payment_method: paymentMethod.id
+            });
+
+            if (confirmError) {
+                throw confirmError;
+            }
+            else {
+            // Payment successful
+            console.log('Payment successful!');
+            window.location.href = '/payment-success';
+            }
+
+        } catch (error) {
+            console.error('Payment error:', error);
+            const errorElement = document.getElementById('card-errors');
+            errorElement.textContent = error.message;
+            submitButton.disabled = false;
+            submitButton.textContent = 'Pay RM <%= totalAmount %>';
+        }
+    });
+        </script>
 </body>
 </html>
