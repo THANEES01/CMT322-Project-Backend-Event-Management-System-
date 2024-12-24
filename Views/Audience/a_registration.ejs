@@ -22,7 +22,7 @@
         background-repeat: no-repeat;
         background-attachment: fixed;
         min-height: 80vh;
-      }catysbuerainfdsd
+      }
       h1 {
         color: var(--text-color);
         font-weight: bold;
@@ -85,12 +85,12 @@
             >
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="/Views/Merchandise/4.merchandise.html"
+            <a class="nav-link" href="/merchandise"
               >Merchandise</a
             >
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="/Views/Audience/7.audience_regis.html"
+            <a class="nav-link" href="/audience"
               >Ticket</a
             >
           </li>
@@ -139,54 +139,72 @@
             required
           />
         </div>
-        <div class="text-center">
-          <button type="submit" class="btn btn-primary">Register</button>
+
+        <div class="price-info">
+          <p class="mb-1">Price per ticket: RM 5.00</p>
+          <div id="totalPrice">Total Amount: RM 5.00</div>
         </div>
+
+        <div class="text-center">
+          <button type="submit" class="btn btn-primary">Proceed to Payment</button>
+        </div>
+
+        <div id="loading">
+          Processing your registration...
+        </div>
+        
       </form>
     </div>
 
     <script>
-      document
-        .getElementById("registration")
-        .addEventListener("submit", function (event) {
-          event.preventDefault();
 
-          // Get form values
-          const name = document.getElementById("fullName").value;
-          const email = document.getElementById("email").value;
-          const phone = document.getElementById("phone").value;
-          const numberOfTickets =
-            document.getElementById("numberOfTickets").value;
+// Update total price when number of tickets changes
+document.getElementById('numberOfTickets').addEventListener('input', function() {
+        const tickets = this.value;
+        const total = tickets * 5;
+        document.getElementById('totalPrice').textContent = `Total Amount: RM ${total.toFixed(2)}`;
+      });
 
-          // Create audience record
-          const audienceRecord = {
-            name: name,
-            email: email,
-            phone: phone,
-            tickets: numberOfTickets,
+
+// Handle form submission
+      document.getElementById('registration').addEventListener('submit', async function(event) {
+        event.preventDefault();
+        
+        const loadingDiv = document.getElementById('loading');
+        loadingDiv.style.display = 'block';
+
+        try {
+          const formData = {
+            name: document.getElementById('fullName').value,
+            email: document.getElementById('email').value,
+            phone: document.getElementById('phone').value,
+            tickets: parseInt(document.getElementById('numberOfTickets').value)
           };
 
-          // Get existing audience records
-          const existingAudience = JSON.parse(
-            localStorage.getItem("audience") || "[]"
-          );
+          // Send registration data to server
+          const response = await fetch('/api/audience/register', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+          });
 
-          // Add new record
-          existingAudience.push(audienceRecord);
+          const result = await response.json();
 
-          // Save back to localStorage
-          localStorage.setItem("audience", JSON.stringify(existingAudience));
-
-          // Redirect to payment page
-          const paymentPage = `9.payment_ad.html?name=${encodeURIComponent(
-            name
-          )}&email=${encodeURIComponent(email)}&phone=${encodeURIComponent(
-            phone
-          )}&numberOfTickets=${numberOfTickets}`;
-          window.location.href = paymentPage;
-        });
-
-
+          if (result.success) {
+            // Redirect to payment page
+            window.location.href = result.data.redirectUrl;
+          } else {
+            alert(result.message || 'Registration failed. Please try again.');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('Registration failed. Please try again.');
+        } finally {
+          loadingDiv.style.display = 'none';
+        }
+      });
     
     </script>
   </body>
