@@ -169,18 +169,8 @@ app.get('/participant/payment', async (req, res) => {
     try {
         const { registrationId, amount } = req.query;
 
-        // Create payment intent with Stripe
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount: amount * 100, // Convert to cents
-            currency: 'myr',
-            metadata: {
-                registrationId,
-                type: 'participant_registration'
-            }
-        });
-
-        // Get registration details
-        const result = await pool.query(
+        // Get registration details from database
+        const registrationResult = await pool.query(
             `SELECT pr.*, pd.full_name, pd.email 
              FROM participant_registration pr 
              JOIN participant_details pd ON pr.id = pd.registration_id 
@@ -188,22 +178,96 @@ app.get('/participant/payment', async (req, res) => {
             [registrationId]
         );
 
-        const registration = result.rows[0];
+        const registration = registrationResult.rows[0];
 
+        // Create payment intent
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(amount * 100),
+            currency: 'myr',
+            metadata: {
+                registrationId: registrationId,
+                type: 'participant_registration'
+            }
+        });
+
+        // Render payment page
         res.render('participant/payment', {
             registrationId,
-            amount,
             teamName: registration.team_name,
             leaderName: registration.full_name,
             email: registration.email,
+            amount: amount,
             stripePublicKey: process.env.STRIPE_PUBLIC_KEY,
             clientSecret: paymentIntent.client_secret
         });
 
     } catch (error) {
         console.error('Payment setup error:', error);
-        res.status(500).send('Error setting up payment');
+        res.redirect('/participant/payment-failed?error=' + encodeURIComponent(error.message));
     }
+});
+
+// Handle successful payment for particiapnt registration
+app.get('/participant/payment-success', async (req, res) => {
+    try {
+        console.log('Payment success query params:', req.query);
+        
+        const paymentIntentId = req.query.payment_intent;
+        if (!paymentIntentId) {
+            throw new Error('No payment intent ID provided');
+        }
+
+        // Retrieve payment intent from Stripe
+        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+        console.log('Retrieved payment intent:', paymentIntent);
+
+        if (paymentIntent.status === 'succeeded') {
+            const registrationId = paymentIntent.metadata.registrationId;
+
+            // Update payment status
+            await pool.query(
+                'UPDATE participant_registration SET payment_stat = $1, transaction_id = $2 WHERE id = $3',
+                ['completed', paymentIntentId, registrationId]
+            );
+
+            // Get registration details
+            const registrationResult = await pool.query(
+                `SELECT * FROM participant_registration WHERE id = $1`,
+                [registrationId]
+            );
+
+            // Get participants details
+            const participantsResult = await pool.query(
+                `SELECT * FROM participant_details 
+                 WHERE registration_id = $1 
+                 ORDER BY is_leader DESC`,
+                [registrationId]
+            );
+
+            // Render success page
+            res.render('participant/p_payment_success', {
+                registrationId,
+                teamName: registrationResult.rows[0].team_name,
+                category: registrationResult.rows[0].category,
+                amount: registrationResult.rows[0].total_amount,
+                transactionId: paymentIntentId,
+                participants: participantsResult.rows
+            });
+        } else {
+            throw new Error('Payment was not successful');
+        }
+
+    } catch (error) {
+        console.error('Error processing success:', error);
+        res.redirect('/participant/payment-failed?error=' + encodeURIComponent(error.message));
+    }
+});
+
+app.get('/participant/payment-failed', (req, res) => {
+    const errorMessage = req.query.error || 'An unexpected error occurred during payment processing.';
+    res.render('participant/p_payment-failed', {
+        error: errorMessage
+    });
 });
 
 
@@ -355,6 +419,125 @@ app.get('/payment-failed', (req, res) => {
         message: 'Payment was unsuccessful. Please try again.',
         error: req.query.error || 'An error occurred during payment processing.'
     });
+});
+
+//route for admin page
+app.get('/admin', async (req, res) => {
+    try {
+        // Get individual registrations
+        const individualRegistrations = await pool.query(
+            `SELECT pr.id, pr.category, pr.team_name, pr.payment_stat, pr.transaction_id, 
+                    pr.total_amount, pr.registration_date, pd.full_name, pd.email 
+             FROM participant_registration pr 
+             JOIN participant_details pd ON pr.id = pd.registration_id 
+             WHERE pd.is_leader = true AND pr.category = 'individual'
+             ORDER BY pr.registration_date DESC`
+        );
+
+        // Get group registrations
+        const groupRegistrations = await pool.query(
+            `SELECT pr.id, pr.category, pr.team_name, pr.payment_stat, pr.transaction_id, 
+                    pr.total_amount, pr.registration_date, pd.full_name, pd.email 
+             FROM participant_registration pr 
+             JOIN participant_details pd ON pr.id = pd.registration_id 
+             WHERE pd.is_leader = true AND pr.category = 'group'
+             ORDER BY pr.registration_date DESC`
+        );
+
+        res.render('admin/adminpage', {
+            individualRegistrations: individualRegistrations.rows,
+            groupRegistrations: groupRegistrations.rows
+        });
+    } catch (error) {
+        console.error('Error loading admin page:', error);
+        res.status(500).send('Error loading admin page');
+    }
+});
+
+// Route to update participant status
+app.post('/admin/update-status', async (req, res) => {
+    try {
+        const { registrationId, status } = req.body;
+        
+        await pool.query(
+            'UPDATE participant_registration SET status = $1 WHERE id = $2',
+            [status, registrationId]
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error updating status:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Route to get participant details
+app.get('/admin/participant-details/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Get registration details
+        const registrationResult = await pool.query(
+            `SELECT * FROM participant_registration WHERE id = $1`,
+            [id]
+        );
+
+        // Get all participants for this registration
+        const participantsResult = await pool.query(
+            `SELECT * FROM participant_details WHERE registration_id = $1 ORDER BY is_leader DESC`,
+            [id]
+        );
+
+        res.json({
+            registration: registrationResult.rows[0],
+            participants: participantsResult.rows
+        });
+    } catch (error) {
+        console.error('Error getting participant details:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// route for admin's audience management
+app.get('/admin/audience', async (req, res) => {
+    try {
+        // Get all audience registrations
+        const audienceResult = await pool.query(
+            `SELECT id, full_name, email, phone_number, number_of_tickets, 
+                    payment_status, transaction_id, total_amount, registration_date
+             FROM audience_registration 
+             ORDER BY registration_date DESC`
+        );
+
+        // Change this line to match your file name
+        res.render('admin/audience_management', {  // Changed from audience-management to audience_management
+            audiences: audienceResult.rows
+        });
+    } catch (error) {
+        console.error('Error loading audience management:', error);
+        res.status(500).send('Error loading audience management page');
+    }
+});
+
+// route to get audience details at admin page
+app.get('/admin/audience/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const result = await pool.query(
+            'SELECT * FROM audience_registration WHERE id = $1',
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Audience not found' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error getting audience details:', error);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // // Merchandise routes

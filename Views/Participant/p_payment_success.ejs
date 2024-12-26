@@ -1,0 +1,232 @@
+<!-- views/participant/payment-success.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration Confirmed - Kalakshetra 6.0</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/Style/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            background-image: linear-gradient(
+                rgba(0, 0, 0, 0.5),
+                rgba(0, 0, 0, 0.848)
+            ),
+            url("/Pictures/Baratham_Pic3.jpg");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            min-height: 80vh;
+        }
+
+        .container {
+            width: 60%;
+            max-width: 1000px;
+            background-color: rgba(16, 29, 44, 0.95);
+            border-radius: 25px;
+            padding: 4rem;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            margin-top: 60px;
+            color: white;
+        }
+
+        .success-icon {
+            font-size: 4rem;
+            color: #28a745;
+            margin-bottom: 2rem;
+        }
+
+        .registration-details {
+            background-color: rgba(47, 51, 57, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 2rem 0;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+
+        .team-members {
+            margin-top: 2rem;
+        }
+
+        .member-card {
+            background-color: rgba(47, 51, 57, 0.8);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 1rem;
+        }
+
+        .member-type {
+            color: #d2a679;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .btn-action {
+            background-color: #8B1F2F;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-action:hover {
+            background-color: #6b1824;
+            transform: translateY(-2px);
+            color: white;
+            text-decoration: none;
+        }
+
+        .important-note {
+            margin-top: 2rem;
+            padding: 15px;
+            background-color: rgba(210, 166, 121, 0.1);
+            border-radius: 10px;
+            border-left: 4px solid #d2a679;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container mt-5">
+        <div class="text-center">
+            <div class="success-icon">✓</div>
+            <h1 class="mb-4">Registration Confirmed!</h1>
+            <p class="lead">Your registration and payment have been successfully processed.</p>
+        </div>
+
+        <div class="registration-details">
+            <h3 class="mb-3">Registration Details</h3>
+            <div class="detail-item">
+                <span>Transaction ID:</span>
+                <span><%= transactionId %></span>
+            </div>
+            <div class="detail-item">
+                <span>Team Name:</span>
+                <span><%= teamName %></span>
+            </div>
+            <div class="detail-item">
+                <span>Category:</span>
+                <span><%= category === 'group' ? 'Group Performance' : 'Individual Performance' %></span>
+            </div>
+            <div class="detail-item">
+                <span>Registration Fee Paid:</span>
+                <span>RM <%= amount %></span>
+            </div>
+            <div class="detail-item">
+                <span>Registration Date:</span>
+                <span><%= new Date().toLocaleDateString() %></span>
+            </div>
+        </div>
+
+        <div class="team-members">
+            <h3 class="mb-3">Team Members</h3>
+            <% participants.forEach((participant, index) => { %>
+                <div class="member-card">
+                    <div class="member-type"><%= index === 0 ? 'Team Leader' : 'Team Member ' + index %></div>
+                    <div class="detail-item">
+                        <span>Name:</span>
+                        <span><%= participant.full_name %></span>
+                    </div>
+                    <div class="detail-item">
+                        <span>Matric Number:</span>
+                        <span><%= participant.matric_number %></span>
+                    </div>
+                    <div class="detail-item">
+                        <span>Email:</span>
+                        <span><%= participant.email %></span>
+                    </div>
+                </div>
+            <% }); %>
+        </div>
+
+        <div class="important-note">
+            <h4>Important Information</h4>
+            <p>Please keep this registration confirmation for your records. A copy has also been sent to your email address.</p>
+            <ul>
+                <li>Event Date: May 5th, 2024</li>
+                <li>Venue: Dewan Budaya, USM</li>
+                <li>Reporting Time: 6:00 PM</li>
+                <li>Performance Start Time: 7:00 PM</li>
+            </ul>
+        </div>
+
+        <div class="text-center mt-4">
+            <button class="btn btn-action" id="download-receipt">Download Receipt</button>
+            <a href="/" class="btn btn-action">Return to Home</a>
+        </div>
+    </div>
+
+    <!-- Add these hidden elements to store data -->
+    <div style="display: none;">
+        <div id="registration-id"><%= registrationId %></div>
+        <div id="team-name"><%= teamName %></div>
+        <div id="category"><%= category %></div>
+        <div id="amount"><%= amount %></div>
+        <div id="transaction-id"><%= transactionId %></div>
+        <div id="participants-data"><%= JSON.stringify(participants) %></div>
+    </div>
+
+    <script>
+        document.getElementById('download-receipt').addEventListener('click', function() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Get participants data from a hidden element or data attribute
+    const participants = JSON.parse(document.getElementById('participants-data').textContent);
+    
+    // Add receipt content
+    doc.setFontSize(20);
+    doc.text('Kalakshetra 6.0 - Registration Receipt', 20, 20);
+
+    doc.setFontSize(12);
+    doc.text('Registration Details:', 20, 40);
+    doc.text('Registration ID: ' + document.getElementById('registration-id').textContent, 20, 50);
+    doc.text('Team Name: ' + document.getElementById('team-name').textContent, 20, 60);
+    doc.text('Category: ' + document.getElementById('category').textContent, 20, 70);
+    doc.text('Amount Paid: RM ' + document.getElementById('amount').textContent, 20, 80);
+    doc.text('Transaction ID: ' + document.getElementById('transaction-id').textContent, 20, 90);
+    doc.text('Date: ' + new Date().toLocaleDateString(), 20, 100);
+
+    doc.text('Team Members:', 20, 120);
+    let yPosition = 130;
+
+    // Add team members details
+    participants.forEach(function(participant, i) {
+        doc.text(i === 0 ? 'Team Leader:' : 'Member ' + i + ':', 20, yPosition);
+        doc.text('Name: ' + participant.full_name, 30, yPosition + 10);
+        doc.text('Matric: ' + participant.matric_number, 30, yPosition + 20);
+        yPosition += 40;
+    });
+
+    // Add event details
+    doc.text('Event Details:', 20, yPosition);
+    doc.text('Date: May 5th, 2024', 30, yPosition + 10);
+    doc.text('Venue: Dewan Budaya, USM', 30, yPosition + 20);
+    doc.text('Reporting Time: 6:00 PM', 30, yPosition + 30);
+
+    doc.save('kalakshetra_registration_receipt.pdf');
+});
+    </script>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.7/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

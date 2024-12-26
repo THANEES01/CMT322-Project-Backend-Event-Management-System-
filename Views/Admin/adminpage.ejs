@@ -1,0 +1,239 @@
+<!-- views/admin/admin.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalakshetra 6.0 - Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Include your CSS here */
+        body {
+            background-color: #ffffff;
+        }
+
+        .sidebar {
+            background-color: rgba(16, 29, 44, 0.95);
+            min-height: 100vh;
+            padding-top: 20px;
+        }
+
+        .sidebar-header {
+            color: #ffffff;
+            padding: 15px;
+            text-align: center;
+            border-bottom: 3px ridge rgba(215, 0, 0, 0.685);
+        }
+
+        /* Rest of your CSS styles */
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-2 d-none d-md-block sidebar">
+                <div class="position-sticky">
+                    <div class="sidebar-header">
+                        <h3>Admin Panel</h3>
+                    </div>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/admin">
+                                <i class="fas fa-users"></i> Participant Management
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin/audience">
+                                <i class="fas fa-ticket-alt"></i> Audience Management
+                            </a>
+                        </li>
+                        <!-- Other menu items -->
+                        <li class="nav-item">
+                            <a class="nav-link" href="/">
+                                <i class="fas fa-sign-out-alt"></i> Logout
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="col-md-10 ms-sm-auto px-4">
+                <div id="participantManagement" class="mt-4">
+                    <h2 class="mb-4">Participant Management</h2>
+            
+                    <!-- Individual Participants Section -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-dark text-white">
+                            <h4>Individual Participants</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Category</th>
+                                            <th>Name</th>
+                                            <th>Email</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% individualRegistrations.forEach(registration => { %>
+                                            <tr>
+                                                <td><%= registration.id %></td>
+                                                <td>
+                                                    <span class="badge bg-warning text-dark">
+                                                        Individual
+                                                    </span>
+                                                </td>
+                                                <td><%= registration.full_name %></td>
+                                                <td><%= registration.email %></td>
+                                                <td>
+                                                    <button class="btn btn-info btn-sm" onclick="viewDetails('<%= registration.id %>')">
+                                                        <i class="fas fa-eye"></i> View Details
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        <% }); %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+            
+                    <!-- Group Participants Section -->
+                    <div class="card">
+                        <div class="card-header bg-dark text-white">
+                            <h4>Group Participants</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Category</th>
+                                            <th>Team Name</th>
+                                            <th>Leader Email</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% groupRegistrations.forEach(registration => { %>
+                                            <tr>
+                                                <td><%= registration.id %></td>
+                                                <td>
+                                                    <span class="badge bg-danger">
+                                                        Group
+                                                    </span>
+                                                </td>
+                                                <td><%= registration.team_name %></td>
+                                                <td><%= registration.email %></td>
+                                                <td>
+                                                    <button class="btn btn-info btn-sm" onclick="viewDetails('<%= registration.id %>')">
+                                                        <i class="fas fa-eye"></i> View Details
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        <% }); %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            
+                <!-- Details Modal -->
+                <div class="modal fade" id="detailsModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Participant Details</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div id="registrationDetails">
+                                    <!-- Details will be inserted here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+            
+            <script>
+            async function viewDetails(registrationId) {
+                try {
+                    const response = await fetch(`/admin/participant-details/${registrationId}`);
+                    const data = await response.json();
+                    
+                    let detailsHtml = `
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5>Registration Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p><strong>Category:</strong> ${data.registration.category}</p>
+                                        <p><strong>Team Name:</strong> ${data.registration.team_name}</p>
+                                        <p><strong>Payment Status:</strong> 
+                                            <span class="badge bg-${data.registration.payment_stat === 'completed' ? 'success' : 'warning'}">
+                                                ${data.registration.payment_stat}
+                                            </span>
+                                        </p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p><strong>Transaction ID:</strong> ${data.registration.transaction_id || 'N/A'}</p>
+                                        <p><strong>Total Amount:</strong> RM${data.registration.total_amount}</p>
+                                        <p><strong>Registration Date:</strong> ${new Date(data.registration.registration_date).toLocaleDateString()}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+            
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>Participant Details</h5>
+                            </div>
+                            <div class="card-body">
+                                ${data.participants.map((participant, index) => `
+                                    <div class="card mb-2">
+                                        <div class="card-header bg-light">
+                                            <h6 class="mb-0">${participant.is_leader ? 'Team Leader' : 'Team Member ' + index}</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <p><strong>Name:</strong> ${participant.full_name}</p>
+                                                    <p><strong>Email:</strong> ${participant.email}</p>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <p><strong>Matric Number:</strong> ${participant.matric_number}</p>
+                                                    <p><strong>Gender:</strong> ${participant.gender}</p>
+                                                    <p><strong>Age:</strong> ${participant.age}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+            
+                    document.getElementById('registrationDetails').innerHTML = detailsHtml;
+                            new bootstrap.Modal(document.getElementById('detailsModal')).show();
+                        } catch (error) {
+                            console.error('Error:', error);
+                            alert('Failed to load details');
+                        }
+                    }
+            </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!-- views/participant/payment-failed.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Failed - Kalakshetra 6.0</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/Style/style.css">
+    <style>
+        body {
+            background-image: linear-gradient(
+                rgba(0, 0, 0, 0.5),
+                rgba(0, 0, 0, 0.848)
+            ),
+            url("/Pictures/Baratham_Pic3.jpg");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            min-height: 80vh;
+        }
+
+        .container {
+            width: 60%;
+            max-width: 1000px;
+            background-color: rgba(16, 29, 44, 0.95);
+            border-radius: 25px;
+            padding: 4rem;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            margin-top: 60px;
+            color: white;
+            text-align: center;
+        }
+
+        .error-icon {
+            font-size: 4rem;
+            color: #dc3545;
+            margin-bottom: 2rem;
+        }
+
+        .error-message {
+            background-color: rgba(220, 53, 69, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 2rem 0;
+            border-left: 4px solid #dc3545;
+        }
+
+        .btn-action {
+            background-color: #8B1F2F;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-action:hover {
+            background-color: #6b1824;
+            transform: translateY(-2px);
+            color: white;
+            text-decoration: none;
+        }
+
+        .help-section {
+            margin-top: 2rem;
+            padding: 20px;
+            background-color: rgba(47, 51, 57, 0.8);
+            border-radius: 10px;
+            text-align: left;
+        }
+
+        .contact-info {
+            margin-top: 1.5rem;
+            padding: 15px;
+            background-color: rgba(210, 166, 121, 0.1);
+            border-radius: 10px;
+        }
+
+        .contact-info i {
+            margin-right: 10px;
+            color: #d2a679;
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="container mt-5">
+        <div class="error-icon">✕</div>
+        <h1 class="mb-4">Payment Failed</h1>
+        <p class="lead">We were unable to process your registration payment.</p>
+
+        <div class="error-message">
+            <h4>Error Details</h4>
+            <p><%= error || 'An unexpected error occurred during payment processing.' %></p>
+        </div>
+
+        <div class="help-section">
+            <h4>What can you do?</h4>
+            <ul>
+                <li>Check your card details and try again</li>
+                <li>Make sure you have sufficient funds in your account</li>
+                <li>Try using a different payment method</li>
+                <li>Contact your bank if the problem persists</li>
+            </ul>
+
+            <div class="contact-info">
+                <h5>Need Help?</h5>
+                <p>If you continue to experience issues, please contact our support team:</p>
+                <p><i class="fas fa-envelope"></i>kalakshetra@usm.my</p>
+                <p><i class="fas fa-phone"></i>+60 12-345 6789 (Mr Yogan)</p>
+            </div>
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="/registration" class="btn btn-action">Try Again</a>
+            <a href="/" class="btn btn-action">Return to Home</a>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.7/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
