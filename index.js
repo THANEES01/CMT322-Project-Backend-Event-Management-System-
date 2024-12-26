@@ -4,12 +4,25 @@ import express from 'express';
 import Stripe from 'stripe';
 import pool from './db.js';
 import path from 'path';
+import multer from 'multer';  // Import multer for handling file uploads.
 import { fileURLToPath } from 'url';
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Multer configuration
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'public/Pictures')
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + '-' + file.originalname)
+    }
+});
+
+const upload = multer({ storage: storage });
 
 const port = process.env.PORT;
 
@@ -540,10 +553,55 @@ app.get('/admin/audience/:id', async (req, res) => {
     }
 });
 
-// // Merchandise routes
-// app.get('/merchandise', (req, res) => {
-//   res.render('merchandise/merchan');
-// });
+// Admin merchandise management routes
+app.get('/admin/merchandise', async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM merchandise ORDER BY id DESC'
+        );
+        
+        res.render('admin/admin_merchandise', {
+            merchandise: result.rows
+        });
+    } catch (error) {
+        console.error('Error loading merchandise management:', error);
+        res.status(500).send('Error loading merchandise page');
+    }
+});
+
+// Handle merchandise image upload and creation
+app.post('/admin/merchandise/add', upload.single('image'), async (req, res) => {
+    try {
+        const { name, price } = req.body;
+        const imagePath = `/Pictures/${req.file.filename}`;
+
+        await pool.query(
+            'INSERT INTO merchandise (name, price, image_path) VALUES ($1, $2, $3)',
+            [name, price, imagePath]
+        );
+
+        res.redirect('/admin/merchandise');
+    } catch (error) {
+        console.error('Error adding merchandise:', error);
+        res.status(500).send('Error adding merchandise');
+    }
+});
+
+// Public merchandise page route
+app.get('/merchandise', async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM merchandise ORDER BY id DESC'
+        );
+
+        res.render('Merchandise/merchan', {
+            merchandise: result.rows
+        });
+    } catch (error) {
+        console.error('Error loading merchandise page:', error);
+        res.status(500).send('Error loading merchandise page');
+    }
+});
 
 // // Admin routes
 // app.get('/admin/login', (req, res) => {
