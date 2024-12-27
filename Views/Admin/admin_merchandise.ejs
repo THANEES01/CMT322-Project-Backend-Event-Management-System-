@@ -8,7 +8,6 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
     <style>
-        /* Include your CSS here */
         body {
             background-color: #ffffff;
         }
@@ -17,6 +16,9 @@
             background-color: rgba(16, 29, 44, 0.95);
             min-height: 100vh;
             padding-top: 20px;
+            position: fixed;
+            left: 0;
+            width: 250px;
         }
     
         .sidebar-header {
@@ -25,58 +27,79 @@
             text-align: center;
             border-bottom: 3px ridge rgba(215, 0, 0, 0.685);
         }
-    
-        /* Rest of your CSS styles */
+
+        .nav-link {
+            color: #ffffff;
+            padding: 10px 20px;
+            margin: 5px 0;
+            transition: 0.3s;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        .nav-link.active {
+            background-color: #233f9c;
+            color: #ffffff;
+        }
+
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .table img {
+            max-width: 100px;
+            height: 50px;
+            object-fit: cover;
+        }
     </style>
-    
 </head>
-
 <body>
-
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <nav class="col-md-2 d-none d-md-block sidebar">
-                <div class="position-sticky">
-                    <div class="sidebar-header">
-                        <h3>Admin Panel</h3>
-                    </div>
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link active" href="/admin">
-                                <i class="fas fa-users"></i> Participant Management
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/admin/audience">
-                                <i class="fas fa-ticket-alt"></i> Audience Management
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/admin/merchandise">
-                                <i class="fas fa-ticket-alt"></i> Merchandise Management
-                            </a>
-                        </li>
-                        <!-- Other menu items -->
-                        <li class="nav-item">
-                            <a class="nav-link" href="/">
-                                <i class="fas fa-sign-out-alt"></i> Logout
-                            </a>
-                        </li>
-                    </ul>
+            <nav class="col-md-2 sidebar">
+                <div class="sidebar-header">
+                    <h3>Admin Panel</h3>
                 </div>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin">
+                            <i class="fas fa-users"></i> Participant Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/audience">
+                            <i class="fas fa-ticket-alt"></i> Audience Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/admin/merchandise">
+                            <i class="fas fa-shopping-bag"></i> Merchandise Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </li>
+                </ul>
             </nav>
 
-    <!-- Admin panel sidebar -->
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Include your admin sidebar -->
-
-            <main class="col-md-10 ms-sm-auto px-4">
-                <h2 class="my-4">Merchandise Management</h2>
+            <!-- Main Content -->
+            <main class="main-content col-md-10">
+                <h2 class="mb-4">Merchandise Management</h2>
 
                 <!-- Add New Merchandise Form -->
-                <div class="card mb-4">
+                <div class="card">
                     <div class="card-header">
                         <h4>Add New Merchandise</h4>
                     </div>
@@ -99,7 +122,7 @@
                     </div>
                 </div>
 
-                <!-- Existing Merchandise List -->
+                <!-- Current Merchandise List -->
                 <div class="card">
                     <div class="card-header">
                         <h4>Current Merchandise</h4>
@@ -119,12 +142,15 @@
                                     <% merchandise.forEach(item => { %>
                                         <tr>
                                             <td>
-                                                <img src="<%= item.image_path %>" alt="<%= item.name %>" style="height: 50px;">
+                                                <img src="<%= item.image_path %>" alt="<%= item.name %>">
                                             </td>
                                             <td><%= item.name %></td>
-                                            <td>RM <%= item.price.toFixed(2) %></td>
+                                            <td>RM <%= item.price %></td>
                                             <td>
-                                                <button class="btn btn-danger btn-sm">Delete</button>
+                                                <button class="btn btn-danger btn-sm" 
+                                                        onclick="deleteMerchandise('<%= item.id %>')">
+                                                    Delete
+                                                </button>
                                             </td>
                                         </tr>
                                     <% }); %>
@@ -137,8 +163,23 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        async function deleteMerchandise(id) {
+            if (confirm('Are you sure you want to delete this item?')) {
+                try {
+                    const response = await fetch(`/admin/merchandise/delete/${id}`, {
+                        method: 'DELETE'
+                    });
+                    if (response.ok) {
+                        location.reload();
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            }
+        }
+    </script>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-

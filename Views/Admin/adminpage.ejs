@@ -8,17 +8,19 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* Include your CSS here */
         body {
             background-color: #ffffff;
         }
-
+    
         .sidebar {
             background-color: rgba(16, 29, 44, 0.95);
             min-height: 100vh;
             padding-top: 20px;
+            position: fixed;
+            left: 0;
+            width: 250px;
         }
-
+    
         .sidebar-header {
             color: #ffffff;
             padding: 15px;
@@ -26,42 +28,70 @@
             border-bottom: 3px ridge rgba(215, 0, 0, 0.685);
         }
 
-        /* Rest of your CSS styles */
+        .nav-link {
+            color: #ffffff;
+            padding: 10px 20px;
+            margin: 5px 0;
+            transition: 0.3s;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        .nav-link.active {
+            background-color: #233f9c;
+            color: #ffffff;
+        }
+
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .table img {
+            max-width: 100px;
+            height: 50px;
+            object-fit: cover;
+        }
     </style>
 </head>
 <body>
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <nav class="col-md-2 d-none d-md-block sidebar">
-                <div class="position-sticky">
-                    <div class="sidebar-header">
-                        <h3>Admin Panel</h3>
-                    </div>
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link active" href="/admin">
-                                <i class="fas fa-users"></i> Participant Management
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/admin/audience">
-                                <i class="fas fa-ticket-alt"></i> Audience Management
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/admin/merchandise">
-                                <i class="fas fa-ticket-alt"></i> Merchandise Management
-                            </a>
-                        </li>
-                        <!-- Other menu items -->
-                        <li class="nav-item">
-                            <a class="nav-link" href="/">
-                                <i class="fas fa-sign-out-alt"></i> Logout
-                            </a>
-                        </li>
-                    </ul>
+            <nav class="col-md-2 sidebar">
+                <div class="sidebar-header">
+                    <h3>Admin Panel</h3>
                 </div>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/admin">
+                            <i class="fas fa-users"></i> Participant Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/audience">
+                            <i class="fas fa-ticket-alt"></i> Audience Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/merchandise">
+                            <i class="fas fa-shopping-bag"></i> Merchandise Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </li>
+                </ul>
             </nav>
 
             <!-- Main Content -->

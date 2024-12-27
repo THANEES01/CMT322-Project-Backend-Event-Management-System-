@@ -189,7 +189,7 @@
                     <img src="<%= item.image_path %>" class="card-img-top" alt="<%= item.name %>">
                     <div class="card-body text-center">
                         <h5 class="card-title"><%= item.name %></h5>
-                        <p class="card-text">RM <%= item.price.toFixed(2) %></p>
+                        <p class="card-text">RM <%= item.price %></p>
                         <button class="btn btn-custom-add add-to-cart-btn" 
                                 data-name="<%= item.name %>" 
                                 data-price="<%= item.price %>">+</button>
@@ -270,7 +270,7 @@
       if (cart.length === 0) {
         document.getElementById('error-message').style.display = 'block';
       } else {
-        window.location.href = '/Views/Merchandise/5.cart.html';
+          window.location.href = '/cart';
       }
     });
   </script>

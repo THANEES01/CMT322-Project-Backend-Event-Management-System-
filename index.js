@@ -587,6 +587,18 @@ app.post('/admin/merchandise/add', upload.single('image'), async (req, res) => {
     }
 });
 
+// Delete merchandise item in admin page
+app.delete('/admin/merchandise/delete/:id', async (req, res) => {
+    try {
+        await pool.query('DELETE FROM merchandise WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting merchandise:', error);
+        res.status(500).json({ success: false });
+    }
+});
+
+
 // Public merchandise page route
 app.get('/merchandise', async (req, res) => {
     try {
@@ -602,6 +614,23 @@ app.get('/merchandise', async (req, res) => {
         res.status(500).send('Error loading merchandise page');
     }
 });
+
+// Cart route
+app.get('/cart', async (req, res) => {
+    try {
+        // Get merchandise data for image mapping
+        const merchandiseResult = await pool.query('SELECT * FROM merchandise');
+
+        res.render('merchandise/cart', {
+            merchandiseData: JSON.stringify(merchandiseResult.rows),
+            title: 'Shopping Cart - Kalakshetra 6.0'
+        });
+    } catch (error) {
+        console.error('Error loading cart page:', error);
+        res.status(500).send('Error loading cart page');
+    }
+});
+
 
 // // Admin routes
 // app.get('/admin/login', (req, res) => {
