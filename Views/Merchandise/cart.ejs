@@ -8,7 +8,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
   <link href="/Style/style.css" rel="stylesheet">
   <style>
-
     body {
       background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.848)), url("/Pictures/BackgroundPic1.jpg");
       background-size: cover;
@@ -27,7 +26,6 @@
     }
   
     .cart-container, .summary-card {
-      /* background-color: var(--card-bg); */
       background-color: rgba(16, 29, 44, 0.95);
       border-radius: 10px;
       box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
@@ -87,7 +85,6 @@
     }
   
     .btn-custom-outline {
-      /* background-color: var(--secondary-color); */
       background-color: #16d50c;
       border: 2px solid var(--secondary-color);
       font-weight: bold;
@@ -126,88 +123,144 @@
   </style>
 </head>
 <body>
-  <div class="container mt-5">
-    <h2 class="text-center page-title">Shopping Cart</h2>
-    
-    <div class="row">
-      <!-- Cart Items Section -->
-      <div class="col-md-8">
-        <div class="cart-container">
-          <div id="cart-items">
-            <!-- Cart items will be dynamically inserted here -->
-          </div>
-          <div class="empty-cart" id="empty-cart-message" style="display: none;">
-            <h4>Your cart is empty</h4>
-            <p>Add some items to your cart to see them here.</p>
-            <a href="/merchandise" class="btn-custom-outline">Continue Shopping</a>
-          </div>
+    <div class="container mt-5">
+        <h2 class="text-center page-title">Shopping Cart</h2>
+        
+        <div class="row">
+            <div class="col-md-8">
+                <div class="cart-container">
+                    <div id="cart-items">
+                        <!-- Cart items will be dynamically inserted here -->
+                    </div>
+                    <div class="empty-cart" id="empty-cart-message" style="display: none;">
+                        <h4>Your cart is empty</h4>
+                        <p>Add some items to your cart to see them here.</p>
+                        <a href="/merchandise" class="btn-custom-outline">Continue Shopping</a>
+                    </div>
+                </div>
+            </div>
+     
+            <div class="col-md-4">
+                <div class="summary-card">
+                    <h4>Order Summary</h4>
+                    <div class="d-flex justify-content-between mt-3">
+                        <span>Subtotal:</span>
+                        <span id="subtotal" class="text-price">RM0.00</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <strong>Total:</strong>
+                        <strong id="total" class="text-price">RM0.00</strong>
+                    </div>
+                    <button class="btn btn-primary w-100 mt-3" id="checkout-btn">Proceed to Checkout</button>
+                    <a href="/merchandise" class="btn btn-custom-outline w-100 mt-2">Continue Shopping</a>
+                </div>
+            </div>
         </div>
-      </div>
-
-      <!-- Order Summary Section -->
-      <div class="col-md-4">
-        <div class="summary-card">
-          <h4>Order Summary</h4>
-          <div class="d-flex justify-content-between mt-3">
-            <span>Subtotal:</span>
-            <span id="subtotal" class="text-price">RM0.00</span>
-          </div>
-          <div class="d-flex justify-content-between mt-2">
-            <span>Shipping:</span>
-            <span id="shipping" class="text-price">RM5.00</span>
-          </div>
-          <hr>
-          <div class="d-flex justify-content-between">
-            <strong>Total:</strong>
-            <strong id="total" class="text-price">RM0.00</strong>
-          </div>
-          <button class="btn btn-primary w-100 mt-3" id="checkout-btn">Proceed to Checkout</button>
-          <a href="/merchandise" class="btn btn-custom-outline w-100 mt-2">Continue Shopping</a>
-        </div>
-      </div>
     </div>
-  </div>
-
-  <script>
-    // Create a mapping of merchandise data from database
-    const merchandiseData = JSON.parse('<%- merchandiseData %>');
-
-
-    document.addEventListener('DOMContentLoaded', function() {
-    loadCart();
-    updateSummary();
-  });
-
-  function getItemImage(name) {
-    const item = merchandiseData.find(m => m.name === name);
-    return item ? item.image_path : '/Pictures/default.jpg';
-  }
-
-  function loadCart() {
-    const cart = JSON.parse(localStorage.getItem('cart')) || [];
-    const cartContainer = document.getElementById('cart-items');
-    const emptyCartMessage = document.getElementById('empty-cart-message');
-
-    if (cart.length === 0) {
-      emptyCartMessage.style.display = 'block';
-      return;
-    }
-
-    cartContainer.innerHTML = cart.map((item, index) => `
-      <div class="cart-item">
-        <div class="row align-items-center">
-          <div class="col-md-2">
-            <img src="${getItemImage(item.name)}" class="item-image" alt="${item.name}">
-          </div>
-          <div class="col-md-4">
-            <h5 class="mb-0">${item.name}</h5>
-            <p class="text-price mb-0">RM${item.price.toFixed(2)}</p>
-          </div>
-          <!-- Rest of the cart item HTML -->
-        </div>
-      </div>
-    `).join('');
-  }
-  </script>
+     
+    <script>
+        const merchandiseData = JSON.parse('<%- merchandiseData %>');
+     
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCart();
+            updateSummary();
+        });
+     
+        function getItemImage(name) {
+            const item = merchandiseData.find(m => m.name === name);
+            return item ? item.image_path : '/Pictures/default.jpg';
+        }
+     
+        function loadCart() {
+            const cart = JSON.parse(localStorage.getItem('cart')) || [];
+            const cartContainer = document.getElementById('cart-items');
+            const emptyCartMessage = document.getElementById('empty-cart-message');
+     
+            if (cart.length === 0) {
+                emptyCartMessage.style.display = 'block';
+                cartContainer.innerHTML = '';
+                return;
+            }
+     
+            emptyCartMessage.style.display = 'none';
+            cartContainer.innerHTML = cart.map((item, index) => `
+                <div class="cart-item">
+                    <div class="row align-items-center">
+                        <div class="col-md-2">
+                            <img src="${getItemImage(item.name)}" class="item-image" alt="${item.name}">
+                        </div>
+                        <div class="col-md-4">
+                            <h5 class="mb-0">${item.name}</h5>
+                            <p class="text-price mb-0">RM${item.price.toFixed(2)}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="quantity-control">
+                                <button class="quantity-btn minus" onclick="updateQuantity(${index}, -1)">-</button>
+                                <span>${item.quantity}</span>
+                                <button class="quantity-btn plus" onclick="updateQuantity(${index}, 1)">+</button>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <p class="mb-0 text-price">RM${(item.price * item.quantity).toFixed(2)}</p>
+                        </div>
+                        <div class="col-md-1">
+                            <button class="remove-btn" onclick="removeItem(${index})">×</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+     
+        function updateQuantity(index, delta) {
+            const cart = JSON.parse(localStorage.getItem('cart')) || [];
+            if (index >= 0 && index < cart.length) {
+                // Get current item
+                const item = cart[index];
+                
+                // Update quantity
+                item.quantity = Math.max(0, item.quantity + delta);
+                
+                // Remove item if quantity is 0
+                if (item.quantity === 0) {
+                    cart.splice(index, 1);
+                }
+                
+                // Save cart
+                localStorage.setItem('cart', JSON.stringify(cart));
+                
+                // Update UI
+                updateSummary();
+                loadCart();
+            }
+        }
+     
+        function removeItem(index) {
+            const cart = JSON.parse(localStorage.getItem('cart')) || [];
+            if (index >= 0 && index < cart.length) {
+                cart.splice(index, 1);
+                localStorage.setItem('cart', JSON.stringify(cart));
+                updateSummary();
+                loadCart();
+            }
+        }
+     
+        function updateSummary() {
+            const cart = JSON.parse(localStorage.getItem('cart')) || [];
+            const total = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+     
+            document.getElementById('subtotal').textContent = `RM${total.toFixed(2)}`;
+            document.getElementById('total').textContent = `RM${total.toFixed(2)}`;
+        }
+     
+        document.getElementById('checkout-btn').addEventListener('click', function() {
+            const cart = JSON.parse(localStorage.getItem('cart')) || [];
+            if (cart.length === 0) {
+                alert('Your cart is empty. Please add items before checking out.');
+            } else {
+                window.location.href = '/merchandise/checkout';
+            }
+        });
+    </script>
 </body>
 </html>
