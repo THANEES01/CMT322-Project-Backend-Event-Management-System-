@@ -556,16 +556,97 @@ app.get('/admin/audience/:id', async (req, res) => {
 // Admin merchandise management routes
 app.get('/admin/merchandise', async (req, res) => {
     try {
-        const result = await pool.query(
+        // Get merchandise items
+        const merchandiseResult = await pool.query(
             'SELECT * FROM merchandise ORDER BY id DESC'
         );
-        
+
+        // Get all orders with their items
+        const ordersResult = await pool.query(`
+            SELECT 
+                mo.*,
+                json_agg(
+                    json_build_object(
+                        'name', m.name,
+                        'quantity', mi.quantity,
+                        'price', mi.price_per_unit,
+                        'subtotal', mi.price_per_unit * mi.quantity
+                    )
+                ) as items
+            FROM merch_orders mo
+            LEFT JOIN merch_order_items mi ON mo.id = mi.order_id
+            LEFT JOIN merchandise m ON mi.merchandise_id = m.id
+            GROUP BY 
+                mo.id, 
+                mo.full_name, 
+                mo.matric_number,
+                mo.email,
+                mo.phone,
+                mo.total_amount,
+                mo.created_at
+            ORDER BY mo.created_at DESC
+        `);
+
+        // Check if orders exist and handle null values
+        let orders = [];
+        if (ordersResult.rows.length > 0) {
+            orders = ordersResult.rows.map(order => ({
+                ...order,
+                items: order.items[0] === null ? [] : order.items
+            }));
+        }
+
+        // Console log for debugging
+        console.log('Orders data:', orders);
+
+        // Render the template with both merchandise and orders data
         res.render('admin/admin_merchandise', {
-            merchandise: result.rows
+            merchandise: merchandiseResult.rows,
+            orders: orders,
+            title: 'Merchandise Management'
         });
+
     } catch (error) {
         console.error('Error loading merchandise management:', error);
-        res.status(500).send('Error loading merchandise page');
+        res.status(500).render('error', { 
+            message: 'Error loading merchandise page',
+            error: error
+        });
+    }
+
+});
+
+// Get order details for admin view
+app.get('/admin/merchandise/orders/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const orderResult = await pool.query(
+            `SELECT mo.*, 
+                    json_agg(
+                        json_build_object(
+                            'name', m.name,
+                            'quantity', mi.quantity,
+                            'price', mi.price_per_unit,
+                            'subtotal', mi.price_per_unit * mi.quantity
+                        )
+                    ) as items
+             FROM merch_orders mo
+             JOIN merch_order_items mi ON mo.id = mi.order_id
+             JOIN merchandise m ON mi.merchandise_id = m.id
+             WHERE mo.id = $1
+             GROUP BY mo.id`,
+            [id]
+        );
+
+        if (orderResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+
+        res.json(orderResult.rows[0]);
+    } catch (error) {
+        console.error('Error getting order details:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -704,60 +785,38 @@ app.post('/api/merchandise/create-order', async (req, res) => {
 // Render payment page
 app.get('/merchandise/payment/:orderId', async (req, res) => {
     try {
-        const { orderId } = req.params;
+        const { id } = req.params;
+        
+        const query = `
+            SELECT 
+                mo.*,
+                json_agg(
+                    json_build_object(
+                        'name', m.name,
+                        'quantity', mi.quantity,
+                        'price_per_unit', mi.price_per_unit,
+                        'subtotal', (mi.quantity * mi.price_per_unit)
+                    )
+                ) as items
+            FROM merch_orders mo
+            LEFT JOIN merch_order_items mi ON mo.id = mi.order_id
+            LEFT JOIN merchandise m ON mi.merchandise_id = m.id
+            WHERE mo.id = $1
+            GROUP BY mo.id`;
 
-        // Get order details
-        const orderResult = await pool.query(
-            `SELECT mo.*, 
-                    json_agg(
-                        json_build_object(
-                            'id', m.id,
-                            'name', m.name,
-                            'price', mi.price_per_unit,
-                            'quantity', mi.quantity,
-                            'image_path', m.image_path,
-                            'subtotal', mi.subtotal
-                        )
-                    ) as items
-             FROM merch_orders mo
-             JOIN merch_order_items mi ON mo.id = mi.order_id
-             JOIN merchandise m ON mi.merchandise_id = m.id
-             WHERE mo.id = $1
-             GROUP BY mo.id`,
-            [orderId]
-        );
+        const result = await pool.query(query, [id]);
 
-        if (orderResult.rows.length === 0) {
-            throw new Error('Order not found');
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Order not found' });
         }
 
-        const order = orderResult.rows[0];
+        // For debugging
+        console.log('Order details:', result.rows[0]);
 
-        // Create Stripe payment intent
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(order.total_amount * 100), // Convert to cents
-            currency: 'myr',
-            metadata: {
-                orderId: orderId.toString(),
-                type: 'merchandise_order'
-            }
-        });
-
-        // Update order with payment intent ID
-        await pool.query(
-            'UPDATE merch_orders SET transaction_id = $1 WHERE id = $2',
-            [paymentIntent.id, orderId]
-        );
-
-        res.render('merchandise/payment', {
-            order,
-            stripePublicKey: process.env.STRIPE_PUBLIC_KEY,
-            clientSecret: paymentIntent.client_secret
-        });
-
+        res.json(result.rows[0]);
     } catch (error) {
-        console.error('Error loading payment page:', error);
-        res.redirect('/merchandise/payment-failed?error=' + encodeURIComponent(error.message));
+        console.error('Error getting order details:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -793,7 +852,7 @@ app.get('/merchandise/payment-success', async (req, res) => {
             // Add this console.log to check the order data
             console.log('Order data:', order);
 
-            res.render('merchandise/order-confirmation', {
+            res.render('merchandise/order_confirmation', {
                 order: order,
                 title: 'Order Confirmation - Kalakshetra 6.0'
             });
