@@ -1,0 +1,141 @@
+<!-- views/merchandise/payment-failed.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Failed - Kalakshetra 6.0</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="/Style/style.css" rel="stylesheet">
+    <style>
+        body {
+            background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.848)), url("/Pictures/BackgroundPic1.jpg");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            min-height: 100vh;
+            padding: 40px 0;
+            color: white;
+        }
+
+        .error-container {
+            background-color: rgba(16, 29, 44, 0.95);
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .error-icon {
+            font-size: 64px;
+            color: #ff6b6b;
+            margin-bottom: 20px;
+        }
+
+        .error-message {
+            background-color: rgba(255, 107, 107, 0.1);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 107, 107, 0.3);
+        }
+
+        .error-details {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 30px;
+        }
+
+        .btn-custom {
+            background-color: #16d50c;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin: 5px;
+            display: inline-block;
+        }
+
+        .btn-custom:hover {
+            background-color: #6b6bc5;
+            transform: scale(1.05);
+            color: white;
+            text-decoration: none;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 2px solid #16d50c;
+            color: #16d50c;
+        }
+
+        .btn-outline:hover {
+            background-color: #16d50c;
+            color: white;
+        }
+
+        .contact-support {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.9rem;
+        }
+
+        .support-email {
+            color: #16d50c;
+            text-decoration: none;
+        }
+
+        .support-email:hover {
+            color: #6b6bc5;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="error-container">
+            <!-- Error Icon -->
+            <div class="error-icon">✕</div>
+            
+            <!-- Main Error Message -->
+            <h2>Payment Failed</h2>
+            <p>We were unable to process your payment.</p>
+
+            <!-- Error Details -->
+            <div class="error-message">
+                <p class="mb-0"><%= error %></p>
+            </div>
+
+            <!-- Helpful Information -->
+            <div class="error-details">
+                <p>This could be due to:</p>
+                <ul class="list-unstyled">
+                    <li>• Insufficient funds</li>
+                    <li>• Incorrect card details</li>
+                    <li>• Bank declined the transaction</li>
+                    <li>• Network connectivity issues</li>
+                </ul>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <a href="/cart" class="btn btn-custom">Return to Cart</a>
+                <a href="/merchandise" class="btn btn-custom btn-outline">Continue Shopping</a>
+            </div>
+
+            <!-- Support Information -->
+            <div class="contact-support">
+                <p>Need help? Contact our support team at</p>
+                <a href="mailto:support@kalakshetra.com" class="support-email">support@kalakshetra.com</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

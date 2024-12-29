@@ -1,0 +1,373 @@
+<!-- views/merchandise/order-confirmation.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmation - Kalakshetra 6.0</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="/Style/style.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        body {
+            background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.848)), url("/Pictures/BackgroundPic1.jpg");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            min-height: 100vh;
+            padding: 40px 0;
+            color: white;
+        }
+
+        .confirmation-container {
+            background-color: rgba(16, 29, 44, 0.95);
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .success-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .success-icon {
+            font-size: 48px;
+            color: #16d50c;
+            margin-bottom: 20px;
+        }
+
+        .order-details, .customer-details {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .order-items {
+            margin: 20px 0;
+        }
+
+        .item-row {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .item-row:last-child {
+            border-bottom: none;
+        }
+
+        .collection-info {
+            background-color: rgba(22, 213, 12, 0.1);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .btn-custom {
+            background-color: #16d50c;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .btn-custom:hover {
+            background-color: #6b6bc5;
+            transform: scale(1.05);
+            color: white;
+        }
+
+        .receipt-section {
+            display: none;
+        }
+
+        @media print {
+            body {
+                background: none;
+                color: black;
+            }
+
+            .confirmation-container {
+                box-shadow: none;
+                padding: 0;
+            }
+
+            .no-print {
+                display: none;
+            }
+
+            .receipt-section {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="confirmation-container">
+            <!-- Success Header -->
+            <div class="success-header no-print">
+                <div class="success-icon">✓</div>
+                <h2>Order Confirmed!</h2>
+                <p>Thank you for your purchase. Your order has been successfully placed.</p>
+            </div>
+
+            <!-- Receipt Content -->
+            <div id="receipt-content">
+                <!-- Logo and Header -->
+                <div class="text-center mb-4">
+                    <h3>Kalakshetra 6.0</h3>
+                    <p>Official Merchandise Receipt</p>
+                </div>
+
+                <!-- Order Details -->
+                <div class="order-details">
+                    <h4>Order Details</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Order ID:</strong> #<%= order.id %></p>
+                            <p><strong>Date:</strong> <%= new Date(order.created_at).toLocaleDateString() %></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Transaction ID:</strong> <%= order.transaction_id %></p>
+                            <p><strong>Status:</strong> <span class="text-success">Paid</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customer Details -->
+                <div class="customer-details">
+                    <h4>Customer Information</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Name:</strong> <%= order.full_name %></p>
+                            <p><strong>Matric Number:</strong> <%= order.matric_number %></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Email:</strong> <%= order.email %></p>
+                            <p><strong>Phone:</strong> <%= order.phone %></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Items -->
+                <div class="order-items">
+                    <h4>Ordered Items</h4>
+                    <% order.items.forEach(function(item) { %>
+                        <div class="item-row">
+                            <div class="row align-items-center">
+                                <div class="col-6">
+                                    <h6 class="mb-0"><%= item.name %></h6>
+                                </div>
+                                <div class="col-2 text-center">
+                                    <span>x<%= item.quantity %></span>
+                                </div>
+                                <div class="col-4 text-right">
+                                    <span>RM<%= item.subtotal.toFixed(2) %></span>
+                                </div>
+                            </div>
+                        </div>
+                    <% }); %>
+                    
+                    <div class="mt-3 pt-3 border-top">
+                        <div class="row">
+                            <div class="col-8 text-right">
+                                <strong>Total Amount:</strong>
+                            </div>
+                            <div class="col-4 text-right">
+                                <strong>RM<%= order.total_amount %></strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Collection Information -->
+                <div class="collection-info">
+                    <h4>Collection Information</h4>
+                    <p>Please collect your merchandise during the event with:</p>
+                    <ul>
+                        <li>This receipt (printed or digital)</li>
+                        <li>Your student ID card</li>
+                        <li>Order ID: #<%= order.id %></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="text-center mt-4 no-print">
+                <button class="btn btn-custom" onclick="downloadReceipt()">Download Receipt</button>
+                <a href="/merchandise" class="btn btn-custom">Back to Shop</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get order data from server-side
+        const orderElement = document.getElementById('receipt-content');
+        const orderData = {
+            id: '<%= order.id %>',
+            created_at: '<%= order.created_at %>',
+            transaction_id: '<%= order.transaction_id %>',
+            full_name: '<%= order.full_name %>',
+            matric_number: '<%= order.matric_number %>',
+            email: '<%= order.email %>',
+            phone: '<%= order.phone %>',
+            total_amount: '<%= order.total_amount %>',
+            // items: <%- JSON.stringify(order.items) %>
+        };
+
+        function downloadReceipt() {
+            // Create a clone of the receipt content
+            const receiptContent = document.getElementById('receipt-content').cloneNode(true);
+            
+            // Add PDF-specific styles
+            const styleText = `
+                /* Keep your existing styles */
+            `;
+    
+            // Create styled container for PDF
+            const pdfContent = document.createElement('div');
+            pdfContent.className = 'pdf-container';
+    
+            // Add styled header
+            const header = document.createElement('div');
+            header.className = 'pdf-header';
+            header.innerHTML = `
+                <div class="kalakshetra-logo">Kalakshetra 6.0</div>
+                <div class="receipt-title">Official Merchandise Receipt</div>
+            `;
+            pdfContent.appendChild(header);
+    
+            // Style order details section
+            const orderDetails = document.createElement('div');
+            orderDetails.className = 'section';
+            orderDetails.innerHTML = `
+                <div class="section-title">Order Details</div>
+                <div class="info-row">
+                    <span class="info-label">Order ID:</span>
+                    <span>#${orderData.id}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Date:</span>
+                    <span>${new Date(orderData.created_at).toLocaleDateString()}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Transaction ID:</span>
+                    <span>${orderData.transaction_id}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Status:</span>
+                    <span class="text-success">Paid</span>
+                </div>
+            `;
+            pdfContent.appendChild(orderDetails);
+    
+            // Style customer details section
+            const customerDetails = document.createElement('div');
+            customerDetails.className = 'section';
+            customerDetails.innerHTML = `
+                <div class="section-title">Customer Information</div>
+                <div class="info-row">
+                    <span class="info-label">Name:</span>
+                    <span>${orderData.full_name}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Matric Number:</span>
+                    <span>${orderData.matric_number}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Email:</span>
+                    <span>${orderData.email}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Phone:</span>
+                    <span>${orderData.phone}</span>
+                </div>
+            `;
+            pdfContent.appendChild(customerDetails);
+    
+            // Style order items section
+            const orderItems = document.createElement('div');
+            orderItems.className = 'section';
+            orderItems.innerHTML = `
+                <div class="section-title">Ordered Items</div>
+                ${orderData.items.map(item => `
+                    <div class="item-row">
+                        <div style="flex: 2;">${item.name} (x${item.quantity})</div>
+                        <div style="flex: 1; text-align: right;">RM${Number(item.subtotal).toFixed(2)}</div>
+                    </div>
+                `).join('')}
+                <div class="total-row">
+                    <div>Total Amount:</div>
+                    <div>RM${Number(orderData.total_amount).toFixed(2)}</div>
+                </div>
+            `;
+            pdfContent.appendChild(orderItems);
+    
+            // Style collection information section
+            const collectionInfo = document.createElement('div');
+            collectionInfo.className = 'collection-info';
+            collectionInfo.innerHTML = `
+                <div class="section-title">Collection Information</div>
+                <p>Please collect your merchandise during the event with:</p>
+                <ul>
+                    <li>This receipt (printed or digital)</li>
+                    <li>Your student ID card</li>
+                    <li>Order ID: #${orderData.id}</li>
+                </ul>
+            `;
+            pdfContent.appendChild(collectionInfo);
+    
+            // Add footer
+            const footer = document.createElement('div');
+            footer.className = 'footer';
+            footer.innerHTML = `
+                <p>Thank you for your purchase!</p>
+                <p>Kalakshetra 6.0 © ${new Date().getFullYear()}</p>
+            `;
+            pdfContent.appendChild(footer);
+    
+            // Add the styles to the PDF content
+            const styleElement = document.createElement('style');
+            styleElement.textContent = styleText;
+            pdfContent.insertBefore(styleElement, pdfContent.firstChild);
+    
+            // Configure PDF options
+            const opt = {
+                margin: [10, 10, 10, 10],
+                filename: `kalakshetra-receipt-${orderData.id}.pdf`,
+                image: { type: 'jpeg', quality: 1 },
+                html2canvas: { 
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff'
+                },
+                jsPDF: { 
+                    unit: 'mm', 
+                    format: 'a4', 
+                    orientation: 'portrait'
+                }
+            };
+    
+            // Generate and download the PDF
+            html2pdf()
+                .from(pdfContent)
+                .set(opt)
+                .save()
+                .catch(err => {
+                    console.error('PDF generation error:', err);
+                    alert('There was an error generating the PDF. Please try again.');
+                });
+        }
+    </script>
+</body>
+</html>

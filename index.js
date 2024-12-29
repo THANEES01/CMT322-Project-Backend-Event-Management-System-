@@ -632,10 +632,186 @@ app.get('/cart', async (req, res) => {
 });
 
 
-// // Admin routes
-// app.get('/admin/login', (req, res) => {
-//   res.render('admin/adminlogin');
-// });
+// Create order and redirect to payment
+app.post('/api/merchandise/create-order', async (req, res) => {
+    try {
+        const { customerDetails, items, totalAmount } = req.body;
+        
+        // Start database transaction
+        const client = await pool.connect();
+        
+        try {
+            await client.query('BEGIN');
+
+            // Insert order
+            const orderResult = await client.query(
+                `INSERT INTO merch_orders 
+                (full_name, matric_number, email, phone, total_amount, payment_status)
+                VALUES ($1, $2, $3, $4, $5, 'pending')
+                RETURNING id`,
+                [
+                    customerDetails.fullName,
+                    customerDetails.matricNumber,
+                    customerDetails.email,
+                    customerDetails.phone,
+                    totalAmount
+                ]
+            );
+
+            const orderId = orderResult.rows[0].id;
+
+            // Insert order items
+            for (const item of items) {
+                await client.query(
+                    `INSERT INTO merch_order_items 
+                    (order_id, merchandise_id, quantity, price_per_unit, subtotal)
+                    VALUES ($1, $2, $3, $4, $5)`,
+                    [
+                        orderId,
+                        item.id,
+                        item.quantity,
+                        item.price,
+                        item.price * item.quantity
+                    ]
+                );
+            }
+
+            await client.query('COMMIT');
+
+            // Send back the orderId for redirection
+            res.status(200).json({
+                success: true,
+                orderId: orderId
+            });
+
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
+
+    } catch (error) {
+        console.error('Order creation error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to create order',
+            error: error.message
+        });
+    }
+});
+
+// Render payment page
+app.get('/merchandise/payment/:orderId', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+
+        // Get order details
+        const orderResult = await pool.query(
+            `SELECT mo.*, 
+                    json_agg(
+                        json_build_object(
+                            'id', m.id,
+                            'name', m.name,
+                            'price', mi.price_per_unit,
+                            'quantity', mi.quantity,
+                            'image_path', m.image_path,
+                            'subtotal', mi.subtotal
+                        )
+                    ) as items
+             FROM merch_orders mo
+             JOIN merch_order_items mi ON mo.id = mi.order_id
+             JOIN merchandise m ON mi.merchandise_id = m.id
+             WHERE mo.id = $1
+             GROUP BY mo.id`,
+            [orderId]
+        );
+
+        if (orderResult.rows.length === 0) {
+            throw new Error('Order not found');
+        }
+
+        const order = orderResult.rows[0];
+
+        // Create Stripe payment intent
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(order.total_amount * 100), // Convert to cents
+            currency: 'myr',
+            metadata: {
+                orderId: orderId.toString(),
+                type: 'merchandise_order'
+            }
+        });
+
+        // Update order with payment intent ID
+        await pool.query(
+            'UPDATE merch_orders SET transaction_id = $1 WHERE id = $2',
+            [paymentIntent.id, orderId]
+        );
+
+        res.render('merchandise/payment', {
+            order,
+            stripePublicKey: process.env.STRIPE_PUBLIC_KEY,
+            clientSecret: paymentIntent.client_secret
+        });
+
+    } catch (error) {
+        console.error('Error loading payment page:', error);
+        res.redirect('/merchandise/payment-failed?error=' + encodeURIComponent(error.message));
+    }
+});
+
+// Handle successful payment
+app.get('/merchandise/payment-success', async (req, res) => {
+    try {
+        const { payment_intent } = req.query;
+
+        const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent);
+        
+        if (paymentIntent.status === 'succeeded') {
+            const orderId = paymentIntent.metadata.orderId;
+
+            // Get complete order details for confirmation page
+            const orderResult = await pool.query(
+                `SELECT mo.*, 
+                        json_agg(json_build_object(
+                            'name', m.name,
+                            'quantity', mi.quantity,
+                            'price', mi.price_per_unit,
+                            'subtotal', mi.subtotal
+                        )) as items
+                 FROM merch_orders mo
+                 JOIN merch_order_items mi ON mo.id = mi.order_id
+                 JOIN merchandise m ON mi.merchandise_id = m.id
+                 WHERE mo.id = $1
+                 GROUP BY mo.id`,
+                [orderId]
+            );
+
+            const order = orderResult.rows[0];
+            
+            // Add this console.log to check the order data
+            console.log('Order data:', order);
+
+            res.render('merchandise/order-confirmation', {
+                order: order,
+                title: 'Order Confirmation - Kalakshetra 6.0'
+            });
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        res.redirect('/merchandise/payment-failed');
+    }
+});
+
+// Handle failed payment
+app.get('/merchandise/payment-failed', (req, res) => {
+    const errorMessage = req.query.error || 'An unexpected error occurred during payment.';
+    res.render('merchandise/payment-failed', {
+        error: errorMessage,
+        title: 'Payment Failed - Kalakshetra 6.0'
+    });
+});
 
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);

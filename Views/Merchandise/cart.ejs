@@ -1,128 +1,194 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= title %></title>
-  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
-  <link href="/Style/style.css" rel="stylesheet">
-  <style>
-    body {
-      background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.848)), url("/Pictures/BackgroundPic1.jpg");
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      background-attachment: fixed;
-      min-height: 80vh;
-      padding: 40px 0;
-    }
-  
-    .page-title {
-      color: #fefcfb;
-      font-weight: bold;
-      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.6);
-      margin-bottom: 30px;
-    }
-  
-    .cart-container, .summary-card {
-      background-color: rgba(16, 29, 44, 0.95);
-      border-radius: 10px;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
-      padding: 20px;
-      color: white;
-    }
-  
-    .cart-item {
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 15px 0;
-    }
-  
-    .cart-item:last-child {
-      border-bottom: none;
-    }
-  
-    .item-image {
-      width: 100px;
-      height: 100px;
-      object-fit: cover;
-      border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    }
-  
-    .quantity-control {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-  
-    .quantity-btn {
-      background-color: var(--secondary-color);
-      border: 2px solid var(--secondary-color);
-      color: white;
-      border-radius: 25px;
-      padding: 5px 15px;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-  
-    .quantity-btn:hover {
-      background-color: var(--primary-color);
-      transform: scale(1.05);
-      color: var(--secondary-color);
-    }
-  
-    .summary-card h4 {
-      color: #ffffff;
-      font-weight: bold;
-      margin-bottom: 20px;
-    }
-  
-    .empty-cart {
-      text-align: center;
-      padding: 40px;
-      color: rgba(255, 255, 255, 0.8);
-    }
-  
-    .btn-custom-outline {
-      background-color: #16d50c;
-      border: 2px solid var(--secondary-color);
-      font-weight: bold;
-      padding: 12px 25px;
-      border-radius: 25px;
-      transition: all 0.3s ease;
-      color: #ffffff;
-    }
-  
-    .btn-custom-outline:hover {
-      background-color: #6b6bc5;
-      border: 2px solid #6b6bc5;
-      transform: scale(1.05);
-      color: #ffffff
-    }
-  
-    .remove-btn {
-      color: #ffffff;
-      background: none;
-      border: none;
-      font-size: 1.5rem;
-      transition: color 0.3s ease;
-    }
-  
-    .remove-btn:hover {
-      color: var(--primary-color);
-    }
-  
-    .text-price {
-      color: var(--text-color);
-    }
-  
-    hr {
-      border-color: rgba(255, 255, 255, 0.1);
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="/Style/style.css" rel="stylesheet">
+    <style>
+        body {
+            background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.848)), url("/Pictures/BackgroundPic1.jpg");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            min-height: 80vh;
+            padding: 40px 0;
+        }
+
+        .page-title {
+            color: #fefcfb;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.6);
+            margin-bottom: 30px;
+        }
+
+        .cart-container, .summary-card {
+            background-color: rgba(16, 29, 44, 0.95);
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            color: white;
+        }
+
+        .cart-item {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 15px 0;
+        }
+
+        .cart-item:last-child {
+            border-bottom: none;
+        }
+
+        .item-image {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .quantity-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .quantity-btn {
+            background-color: var(--secondary-color);
+            border: 2px solid var(--secondary-color);
+            color: white;
+            border-radius: 25px;
+            padding: 5px 15px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .quantity-btn:hover {
+            background-color: var(--primary-color);
+            transform: scale(1.05);
+            color: var(--secondary-color);
+        }
+
+        .summary-card h4 {
+            color: #ffffff;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .empty-cart {
+            text-align: center;
+            padding: 40px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .btn-custom-outline {
+            background-color: #16d50c;
+            border: 2px solid var(--secondary-color);
+            font-weight: bold;
+            padding: 12px 25px;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+            color: #ffffff;
+        }
+
+        .btn-custom-outline:hover {
+            background-color: #6b6bc5;
+            border: 2px solid #6b6bc5;
+            transform: scale(1.05);
+            color: #ffffff
+        }
+
+        .remove-btn {
+            color: #ffffff;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            transition: color 0.3s ease;
+        }
+
+        .remove-btn:hover {
+            color: var(--primary-color);
+        }
+
+        .text-price {
+            color: var(--text-color);
+        }
+
+        .form-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .form-control {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 5px;
+        }
+
+        .form-control:focus {
+            background-color: rgba(255, 255, 255, 0.15);
+            border-color: var(--secondary-color);
+            color: white;
+            box-shadow: none;
+        }
+
+        .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .form-label {
+            color: white;
+            margin-bottom: 0.5rem;
+        }
+
+        .error-message {
+            color: #ff6b6b;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        hr {
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+    </style>
 </head>
 <body>
+    <div class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
     <div class="container mt-5">
         <h2 class="text-center page-title">Shopping Cart</h2>
         
@@ -139,7 +205,7 @@
                     </div>
                 </div>
             </div>
-     
+            
             <div class="col-md-4">
                 <div class="summary-card">
                     <h4>Order Summary</h4>
@@ -152,115 +218,222 @@
                         <strong>Total:</strong>
                         <strong id="total" class="text-price">RM0.00</strong>
                     </div>
-                    <button class="btn btn-primary w-100 mt-3" id="checkout-btn">Proceed to Checkout</button>
+
+                    <!-- Collection Details Form -->
+                    <div class="form-section">
+                        <h5 class="mb-3">Collection Details</h5>
+                        <form id="collection-form">
+                            <div class="mb-3">
+                                <label for="fullName" class="form-label">Full Name</label>
+                                <input type="text" class="form-control" id="fullName" name="fullName" required>
+                                <div class="error-message" id="fullName-error"></div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="matricNumber" class="form-label">Matric Number</label>
+                                <input type="text" class="form-control" id="matricNumber" name="matricNumber" 
+                                       title="Please enter a valid matric number (e.g., 123456)" required>
+                                <div class="error-message" id="matricNumber-error"></div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" name="email" required>
+                                <div class="error-message" id="email-error"></div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="phone" class="form-label">Phone Number</label>
+                                <input type="tel" class="form-control" id="phone" name="phone" 
+                                       pattern="[0-9]{10,11}" 
+                                       title="Please enter a valid phone number" required>
+                                <div class="error-message" id="phone-error"></div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <button class="btn btn-primary w-100 mt-3" id="checkout-btn">Place Order</button>
                     <a href="/merchandise" class="btn btn-custom-outline w-100 mt-2">Continue Shopping</a>
                 </div>
             </div>
         </div>
     </div>
-     
+
     <script>
-        const merchandiseData = JSON.parse('<%- merchandiseData %>');
-     
-        document.addEventListener('DOMContentLoaded', function() {
-            loadCart();
-            updateSummary();
-        });
-     
-        function getItemImage(name) {
-            const item = merchandiseData.find(m => m.name === name);
-            return item ? item.image_path : '/Pictures/default.jpg';
-        }
-     
-        function loadCart() {
-            const cart = JSON.parse(localStorage.getItem('cart')) || [];
-            const cartContainer = document.getElementById('cart-items');
-            const emptyCartMessage = document.getElementById('empty-cart-message');
-     
-            if (cart.length === 0) {
-                emptyCartMessage.style.display = 'block';
-                cartContainer.innerHTML = '';
-                return;
-            }
-     
-            emptyCartMessage.style.display = 'none';
-            cartContainer.innerHTML = cart.map((item, index) => `
-                <div class="cart-item">
-                    <div class="row align-items-center">
-                        <div class="col-md-2">
-                            <img src="${getItemImage(item.name)}" class="item-image" alt="${item.name}">
-                        </div>
-                        <div class="col-md-4">
-                            <h5 class="mb-0">${item.name}</h5>
-                            <p class="text-price mb-0">RM${item.price.toFixed(2)}</p>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="quantity-control">
-                                <button class="quantity-btn minus" onclick="updateQuantity(${index}, -1)">-</button>
-                                <span>${item.quantity}</span>
-                                <button class="quantity-btn plus" onclick="updateQuantity(${index}, 1)">+</button>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <p class="mb-0 text-price">RM${(item.price * item.quantity).toFixed(2)}</p>
-                        </div>
-                        <div class="col-md-1">
-                            <button class="remove-btn" onclick="removeItem(${index})">×</button>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-     
-        function updateQuantity(index, delta) {
-            const cart = JSON.parse(localStorage.getItem('cart')) || [];
-            if (index >= 0 && index < cart.length) {
-                // Get current item
-                const item = cart[index];
-                
-                // Update quantity
-                item.quantity = Math.max(0, item.quantity + delta);
-                
-                // Remove item if quantity is 0
-                if (item.quantity === 0) {
-                    cart.splice(index, 1);
-                }
-                
-                // Save cart
-                localStorage.setItem('cart', JSON.stringify(cart));
-                
-                // Update UI
-                updateSummary();
-                loadCart();
-            }
-        }
-     
-        function removeItem(index) {
-            const cart = JSON.parse(localStorage.getItem('cart')) || [];
-            if (index >= 0 && index < cart.length) {
-                cart.splice(index, 1);
-                localStorage.setItem('cart', JSON.stringify(cart));
-                updateSummary();
-                loadCart();
-            }
-        }
-     
-        function updateSummary() {
-            const cart = JSON.parse(localStorage.getItem('cart')) || [];
-            const total = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
-     
-            document.getElementById('subtotal').textContent = `RM${total.toFixed(2)}`;
-            document.getElementById('total').textContent = `RM${total.toFixed(2)}`;
-        }
-     
-        document.getElementById('checkout-btn').addEventListener('click', function() {
-            const cart = JSON.parse(localStorage.getItem('cart')) || [];
-            if (cart.length === 0) {
-                alert('Your cart is empty. Please add items before checking out.');
-            } else {
-                window.location.href = '/merchandise/checkout';
-            }
-        });
-    </script>
+      const merchandiseData = JSON.parse('<%- merchandiseData %>');
+      const loadingOverlay = document.querySelector('.loading-overlay');
+  
+      document.addEventListener('DOMContentLoaded', function() {
+          loadCart();
+          updateSummary();
+          setupFormValidation();
+      });
+  
+      function setupFormValidation() {
+          const form = document.getElementById('collection-form');
+          const inputs = form.querySelectorAll('input');
+  
+          inputs.forEach(input => {
+              input.addEventListener('input', function() {
+                  validateField(this);
+              });
+          });
+      }
+  
+      function validateField(input) {
+          const errorDiv = document.getElementById(`${input.id}-error`);
+          errorDiv.style.display = 'none';
+          errorDiv.textContent = '';
+  
+          if (!input.checkValidity()) {
+              errorDiv.textContent = input.title || 'Please fill this field correctly';
+              errorDiv.style.display = 'block';
+              return false;
+          }
+          return true;
+      }
+  
+      function validateForm() {
+          const form = document.getElementById('collection-form');
+          const inputs = form.querySelectorAll('input');
+          let isValid = true;
+  
+          inputs.forEach(input => {
+              if (!validateField(input)) {
+                  isValid = false;
+              }
+          });
+  
+          return isValid;
+      }
+  
+      function getItemImage(name) {
+          const item = merchandiseData.find(m => m.name === name);
+          return item ? item.image_path : '/Pictures/default.jpg';
+      }
+  
+      function loadCart() {
+          const cart = JSON.parse(localStorage.getItem('cart')) || [];
+          const cartContainer = document.getElementById('cart-items');
+          const emptyCartMessage = document.getElementById('empty-cart-message');
+  
+          if (cart.length === 0) {
+              emptyCartMessage.style.display = 'block';
+              cartContainer.innerHTML = '';
+              return;
+          }
+  
+          emptyCartMessage.style.display = 'none';
+          cartContainer.innerHTML = cart.map((item, index) => `
+              <div class="cart-item">
+                  <div class="row align-items-center">
+                      <div class="col-md-2">
+                          <img src="${getItemImage(item.name)}" class="item-image" alt="${item.name}">
+                      </div>
+                      <div class="col-md-4">
+                          <h5 class="mb-0">${item.name}</h5>
+                          <p class="text-price mb-0">RM${item.price.toFixed(2)}</p>
+                      </div>
+                      <div class="col-md-3">
+                          <div class="quantity-control">
+                              <button class="quantity-btn minus" onclick="updateQuantity(${index}, -1)">-</button>
+                              <span>${item.quantity}</span>
+                              <button class="quantity-btn plus" onclick="updateQuantity(${index}, 1)">+</button>
+                          </div>
+                      </div>
+                      <div class="col-md-2">
+                          <p class="mb-0 text-price">RM${(item.price * item.quantity).toFixed(2)}</p>
+                      </div>
+                      <div class="col-md-1">
+                          <button class="remove-btn" onclick="removeItem(${index})">×</button>
+                      </div>
+                  </div>
+              </div>
+          `).join('');
+      }
+  
+      function updateQuantity(index, delta) {
+          const cart = JSON.parse(localStorage.getItem('cart')) || [];
+          if (index >= 0 && index < cart.length) {
+              cart[index].quantity = Math.max(1, cart[index].quantity + delta);
+              localStorage.setItem('cart', JSON.stringify(cart));
+              updateSummary();
+              loadCart();
+          }
+      }
+  
+      function removeItem(index) {
+          const cart = JSON.parse(localStorage.getItem('cart')) || [];
+          if (index >= 0 && index < cart.length) {
+              cart.splice(index, 1);
+              localStorage.setItem('cart', JSON.stringify(cart));
+              updateSummary();
+              loadCart();
+          }
+      }
+  
+      function updateSummary() {
+          const cart = JSON.parse(localStorage.getItem('cart')) || [];
+          const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+          document.getElementById('subtotal').textContent = `RM${total.toFixed(2)}`;
+          document.getElementById('total').textContent = `RM${total.toFixed(2)}`;
+      }
+  
+      document.getElementById('checkout-btn').addEventListener('click', async function() {
+          const cart = JSON.parse(localStorage.getItem('cart')) || [];
+          if (cart.length === 0) {
+              alert('Your cart is empty. Please add items before checking out.');
+              return;
+          }
+  
+          if (!validateForm()) {
+              return;
+          }
+  
+          loadingOverlay.style.display = 'flex';
+  
+          const orderData = {
+              customerDetails: {
+                  fullName: document.getElementById('fullName').value,
+                  matricNumber: document.getElementById('matricNumber').value,
+                  email: document.getElementById('email').value,
+                  phone: document.getElementById('phone').value
+              },
+              items: cart.map(item => ({
+                  id: merchandiseData.find(m => m.name === item.name)?.id,
+                  name: item.name,
+                  price: item.price,
+                  quantity: item.quantity
+              })),
+              totalAmount: parseFloat(document.getElementById('total').textContent.replace('RM', ''))
+          };
+  
+          try {
+              const response = await fetch('/api/merchandise/create-order', {
+                  method: 'POST',
+                  headers: {
+                      'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify(orderData)
+              });
+  
+              const result = await response.json();
+  
+              if (!response.ok) {
+                  throw new Error(result.message || 'Failed to create order');
+              }
+  
+              if (result.success) {
+                  // Redirect to payment page with order ID
+                  window.location.href = `/merchandise/payment/${result.orderId}`;
+              } else {
+                  throw new Error(result.message || 'Failed to process order');
+              }
+  
+          } catch (error) {
+              alert('There was an error processing your order: ' + error.message);
+              console.error('Error:', error);
+          } finally {
+              loadingOverlay.style.display = 'none';
+          }
+      });
+  </script>
 </body>
 </html>
