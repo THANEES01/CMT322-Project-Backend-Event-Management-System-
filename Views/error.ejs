@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= locals.title || 'Error - Kalakshetra 6.0' %></title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="/Style/style.css" rel="stylesheet">
+    <style>
+        body {
+            background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.848)), url("/Pictures/BackgroundPic1.jpg");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            min-height: 100vh;
+            padding: 40px 0;
+            color: white;
+        }
+
+        .error-container {
+            background-color: rgba(16, 29, 44, 0.95);
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            max-width: 600px;
+            margin: 50px auto;
+            text-align: center;
+        }
+
+        .error-icon {
+            font-size: 48px;
+            color: #ff6b6b;
+            margin-bottom: 20px;
+        }
+
+        .error-code {
+            font-size: 24px;
+            color: #ff6b6b;
+            margin-bottom: 10px;
+        }
+
+        .error-message {
+            font-size: 18px;
+            margin-bottom: 30px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .btn-return {
+            background-color: #16d50c;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 25px;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-return:hover {
+            background-color: #6b6bc5;
+            transform: scale(1.05);
+            color: white;
+            text-decoration: none;
+        }
+
+        .additional-info {
+            margin-top: 20px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="error-container">
+            <div class="error-icon">
+                <%= locals.statusCode === 404 ? '🔍' : '⚠️' %>
+            </div>
+            
+            <% if (locals.statusCode) { %>
+                <div class="error-code">
+                    Error <%= statusCode %>
+                </div>
+            <% } %>
+
+            <h2><%= locals.errorTitle || (locals.statusCode === 404 ? 'Page Not Found' : 'Oops! Something went wrong') %></h2>
+            
+            <div class="error-message">
+                <%= locals.errorMessage || 'An unexpected error occurred.' %>
+            </div>
+
+            <% if (locals.additionalInfo) { %>
+                <div class="additional-info">
+                    <%= additionalInfo %>
+                </div>
+            <% } %>
+
+            <a href="/merchandise" class="btn-return">Return to Shop</a>
+        </div>
+    </div>
+</body>
+</html>

@@ -377,62 +377,63 @@
       }
   
       document.getElementById('checkout-btn').addEventListener('click', async function() {
-          const cart = JSON.parse(localStorage.getItem('cart')) || [];
-          if (cart.length === 0) {
-              alert('Your cart is empty. Please add items before checking out.');
-              return;
-          }
-  
-          if (!validateForm()) {
-              return;
-          }
-  
-          loadingOverlay.style.display = 'flex';
-  
-          const orderData = {
-              customerDetails: {
-                  fullName: document.getElementById('fullName').value,
-                  matricNumber: document.getElementById('matricNumber').value,
-                  email: document.getElementById('email').value,
-                  phone: document.getElementById('phone').value
-              },
-              items: cart.map(item => ({
-                  id: merchandiseData.find(m => m.name === item.name)?.id,
-                  name: item.name,
-                  price: item.price,
-                  quantity: item.quantity
-              })),
-              totalAmount: parseFloat(document.getElementById('total').textContent.replace('RM', ''))
-          };
-  
-          try {
-              const response = await fetch('/api/merchandise/create-order', {
-                  method: 'POST',
-                  headers: {
-                      'Content-Type': 'application/json'
-                  },
-                  body: JSON.stringify(orderData)
-              });
-  
-              const result = await response.json();
-  
-              if (!response.ok) {
-                  throw new Error(result.message || 'Failed to create order');
-              }
-  
-              if (result.success) {
-                  // Redirect to payment page with order ID
-                  window.location.href = `/merchandise/payment/${result.orderId}`;
-              } else {
-                  throw new Error(result.message || 'Failed to process order');
-              }
-  
-          } catch (error) {
-              alert('There was an error processing your order: ' + error.message);
-              console.error('Error:', error);
-          } finally {
-              loadingOverlay.style.display = 'none';
-          }
+        const cart = JSON.parse(localStorage.getItem('cart')) || [];
+    if (cart.length === 0) {
+        alert('Your cart is empty. Please add items before checking out.');
+        return;
+    }
+
+    if (!validateForm()) {
+        return;
+    }
+
+    loadingOverlay.style.display = 'flex';
+
+    const orderData = {
+        customerDetails: {
+            fullName: document.getElementById('fullName').value,
+            matricNumber: document.getElementById('matricNumber').value,
+            email: document.getElementById('email').value,
+            phone: document.getElementById('phone').value
+        },
+        items: cart.map(item => ({
+            id: merchandiseData.find(m => m.name === item.name)?.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity
+        })),
+        totalAmount: parseFloat(document.getElementById('total').textContent.replace('RM', ''))
+    };
+
+    try {
+        const response = await fetch('/api/merchandise/create-order', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(orderData)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || 'Failed to create order');
+        }
+
+        // Store clientSecret in sessionStorage for the payment page
+        if (result.clientSecret) {
+            sessionStorage.setItem('paymentClientSecret', result.clientSecret);
+        }
+
+        // Redirect to payment page
+        window.location.href = `/merchandise/payment/${result.orderId}`;
+
+            } catch (error) {
+                alert('There was an error processing your order: ' + error.message);
+                console.error('Error:', error);
+            } finally {
+                loadingOverlay.style.display = 'none';
+            }
       });
   </script>
 </body>

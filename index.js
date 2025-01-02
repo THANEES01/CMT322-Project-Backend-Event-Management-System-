@@ -1,4 +1,4 @@
-// app.js or index.js
+//index.js
 import * as dotenv from 'dotenv';
 import express from 'express';
 import Stripe from 'stripe';
@@ -724,22 +724,37 @@ app.post('/api/merchandise/create-order', async (req, res) => {
         try {
             await client.query('BEGIN');
 
-            // Insert order
+            // Create a PaymentIntent first
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: Math.round(totalAmount * 100), // Convert to cents
+                currency: 'myr',
+                automatic_payment_methods: {
+                    enabled: true,
+                },
+            });
+
+            // Insert order with payment intent ID as transaction_id
             const orderResult = await client.query(
                 `INSERT INTO merch_orders 
-                (full_name, matric_number, email, phone, total_amount, payment_status)
-                VALUES ($1, $2, $3, $4, $5, 'pending')
+                (full_name, matric_number, email, phone, total_amount, payment_status, transaction_id)
+                VALUES ($1, $2, $3, $4, $5, 'pending', $6)
                 RETURNING id`,
                 [
                     customerDetails.fullName,
                     customerDetails.matricNumber,
                     customerDetails.email,
                     customerDetails.phone,
-                    totalAmount
+                    totalAmount,
+                    paymentIntent.id
                 ]
             );
 
             const orderId = orderResult.rows[0].id;
+
+            // Update PaymentIntent with orderId in metadata
+            await stripe.paymentIntents.update(paymentIntent.id, {
+                metadata: { orderId: orderId.toString() }
+            });
 
             // Insert order items
             for (const item of items) {
@@ -759,10 +774,11 @@ app.post('/api/merchandise/create-order', async (req, res) => {
 
             await client.query('COMMIT');
 
-            // Send back the orderId for redirection
+            // Send single response with both orderId and clientSecret
             res.status(200).json({
                 success: true,
-                orderId: orderId
+                orderId: orderId,
+                clientSecret: paymentIntent.client_secret
             });
 
         } catch (error) {
@@ -785,38 +801,71 @@ app.post('/api/merchandise/create-order', async (req, res) => {
 // Render payment page
 app.get('/merchandise/payment/:orderId', async (req, res) => {
     try {
-        const { id } = req.params;
+        const orderId = req.params.orderId;
         
-        const query = `
-            SELECT 
-                mo.*,
-                json_agg(
-                    json_build_object(
+        // Fetch order details from the database
+        const orderResult = await pool.query(
+            `SELECT mo.*, 
+                    json_agg(json_build_object(
                         'name', m.name,
                         'quantity', mi.quantity,
-                        'price_per_unit', mi.price_per_unit,
-                        'subtotal', (mi.quantity * mi.price_per_unit)
-                    )
-                ) as items
-            FROM merch_orders mo
-            LEFT JOIN merch_order_items mi ON mo.id = mi.order_id
-            LEFT JOIN merchandise m ON mi.merchandise_id = m.id
-            WHERE mo.id = $1
-            GROUP BY mo.id`;
+                        'price', mi.price_per_unit,
+                        'subtotal', mi.quantity * mi.price_per_unit,
+                        'image_path', m.image_path
+                    )) as items
+             FROM merch_orders mo
+             JOIN merch_order_items mi ON mo.id = mi.order_id
+             JOIN merchandise m ON mi.merchandise_id = m.id
+             WHERE mo.id = $1
+             GROUP BY mo.id`,
+            [orderId]
+        );
 
-        const result = await pool.query(query, [id]);
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Order not found' });
+        if (orderResult.rows.length === 0) {
+            return res.status(404).send('Order not found');
         }
 
-        // For debugging
-        console.log('Order details:', result.rows[0]);
+        const order = orderResult.rows[0];
 
-        res.json(result.rows[0]);
+        // Create new PaymentIntent if one doesn't exist
+        let paymentIntent;
+        if (!order.transaction_id) {
+            paymentIntent = await stripe.paymentIntents.create({
+                amount: Math.round(order.total_amount * 100),
+                currency: 'myr',
+                automatic_payment_methods: {
+                    enabled: true,
+                },
+                metadata: {
+                    orderId: orderId.toString()
+                }
+            });
+
+            // Update the order with the new payment intent ID
+            await pool.query(
+                'UPDATE merch_orders SET transaction_id = $1 WHERE id = $2',
+                [paymentIntent.id, orderId]
+            );
+        } else {
+            // Retrieve existing PaymentIntent
+            paymentIntent = await stripe.paymentIntents.retrieve(order.transaction_id);
+        }
+
+        // Render the payment page with order details
+        res.render('merchandise/payment', {
+            order: order,
+            stripePublicKey: process.env.STRIPE_PUBLIC_KEY,
+            clientSecret: paymentIntent.client_secret,
+            title: 'Payment - Kalakshetra 6.0'
+        });
+
     } catch (error) {
-        console.error('Error getting order details:', error);
-        res.status(500).json({ error: error.message });
+        console.error('Error fetching order details:', error);
+        res.status(500).render('error', {
+            title: 'Payment Error - Kalakshetra 6.0',
+            statusCode: 500,
+            errorMessage: 'An error occurred while processing your payment. Please try again.'
+        });
     }
 });
 
@@ -825,10 +874,18 @@ app.get('/merchandise/payment-success', async (req, res) => {
     try {
         const { payment_intent } = req.query;
 
+        // Retrieve the payment intent from Stripe
         const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent);
         
         if (paymentIntent.status === 'succeeded') {
-            const orderId = paymentIntent.metadata.orderId;
+            // Update order status in database
+            await pool.query(
+                `UPDATE merch_orders 
+                SET payment_status = 'completed', 
+                    created_at = CURRENT_TIMESTAMP 
+                WHERE transaction_id = $1`,
+                [payment_intent]
+            );
 
             // Get complete order details for confirmation page
             const orderResult = await pool.query(
@@ -837,40 +894,72 @@ app.get('/merchandise/payment-success', async (req, res) => {
                             'name', m.name,
                             'quantity', mi.quantity,
                             'price', mi.price_per_unit,
-                            'subtotal', mi.subtotal
+                            'subtotal', mi.subtotal,
+                            'image_path', m.image_path
                         )) as items
                  FROM merch_orders mo
                  JOIN merch_order_items mi ON mo.id = mi.order_id
                  JOIN merchandise m ON mi.merchandise_id = m.id
-                 WHERE mo.id = $1
+                 WHERE mo.transaction_id = $1
                  GROUP BY mo.id`,
-                [orderId]
+                [payment_intent]
             );
+
+            if (orderResult.rows.length === 0) {
+                throw new Error('Order not found');
+            }
 
             const order = orderResult.rows[0];
             
-            // Add this console.log to check the order data
-            console.log('Order data:', order);
-
+            // Clear the cart after successful payment
+            res.clearCookie('cart');
+            
             res.render('merchandise/order_confirmation', {
                 order: order,
                 title: 'Order Confirmation - Kalakshetra 6.0'
             });
+        } else {
+            throw new Error('Payment was not successful');
         }
     } catch (error) {
-        console.error('Error:', error);
-        res.redirect('/merchandise/payment-failed');
+        console.error('Error processing payment success:', error);
+        res.redirect('/merchandise/payment-failed?error=' + encodeURIComponent(error.message));
     }
 });
 
 // Handle failed payment
 app.get('/merchandise/payment-failed', (req, res) => {
     const errorMessage = req.query.error || 'An unexpected error occurred during payment.';
-    res.render('merchandise/payment-failed', {
-        error: errorMessage,
-        title: 'Payment Failed - Kalakshetra 6.0'
+    res.render('error', {
+        title: 'Payment Failed - Kalakshetra 6.0',
+        statusCode: 400,
+        errorTitle: 'Payment Failed',
+        errorMessage: errorMessage
     });
 });
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Error:', err);
+    
+    res.status(err.status || 500).render('error', {
+        title: 'Error - Kalakshetra 6.0',
+        statusCode: err.status || 500,
+        errorMessage: err.message || 'An unexpected error occurred',
+        errorTitle: err.title || 'Server Error',
+        additionalInfo: process.env.NODE_ENV === 'development' ? err.stack : null
+    });
+});
+
+// Add this route for handling 404 errors
+app.use((req, res) => {
+    res.status(404).render('error', {
+        title: '404 Not Found - Kalakshetra 6.0',
+        statusCode: 404,
+        errorMessage: 'The page you are looking for could not be found.'
+    });
+});
+
 
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);

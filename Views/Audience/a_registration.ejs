@@ -136,45 +136,44 @@ document.getElementById('numberOfTickets').addEventListener('input', function() 
 
 
 // Handle form submission
-      document.getElementById('registration').addEventListener('submit', async function(event) {
-        event.preventDefault();
-        
-        const loadingDiv = document.getElementById('loading');
-        loadingDiv.style.display = 'block';
+document.getElementById('registration').addEventListener('submit', async function(event) {
+      event.preventDefault();
+      console.log('Form submitted');
 
-        try {
-          const formData = {
-            name: document.getElementById('fullName').value,
-            email: document.getElementById('email').value,
-            phone: document.getElementById('phone').value,
-            tickets: parseInt(document.getElementById('numberOfTickets').value)
-          };
+      try {
+        const formData = {
+          name: document.getElementById('fullName').value,
+          email: document.getElementById('email').value,
+          phone: document.getElementById('phone').value,
+          tickets: parseInt(document.getElementById('numberOfTickets').value)
+        };
+        console.log('Sending form data:', formData);
 
-          // Send registration data to server
-          const response = await fetch('/api/audience/register', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(formData)
-          });
+        const response = await fetch('/api/audience/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(formData)
+        });
 
-          const result = await response.json();
+        console.log('Response received:', response);
 
-          if (result.success) {
-            // Redirect to payment page
-            window.location.href = result.data.redirectUrl;
-          } else {
-            alert(result.message || 'Registration failed. Please try again.');
-          }
-        } catch (error) {
-          console.error('Error:', error);
-          alert('Registration failed. Please try again.');
-        } finally {
-          loadingDiv.style.display = 'none';
+        const result = await response.json();
+        console.log('Parsed result:', result);
+
+        if (result.success) {
+          console.log('Redirecting to:', result.data.redirectUrl);
+          window.location.href = result.data.redirectUrl;
+        } else {
+          console.error('Registration failed:', result.message);
+          alert(result.message || 'Registration failed. Please try again.');
         }
-      });
-    
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Registration failed. Please try again.');
+      }
+    });
     </script>
   </body>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
