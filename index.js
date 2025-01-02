@@ -622,20 +622,24 @@ app.get('/admin/merchandise/orders/:id', async (req, res) => {
         const { id } = req.params;
         
         const orderResult = await pool.query(
-            `SELECT mo.*, 
+            `SELECT 
+                mo.*,
+                COALESCE(
                     json_agg(
                         json_build_object(
                             'name', m.name,
                             'quantity', mi.quantity,
                             'price', mi.price_per_unit,
-                            'subtotal', mi.price_per_unit * mi.quantity
+                            'subtotal', mi.quantity * mi.price_per_unit
                         )
-                    ) as items
-             FROM merch_orders mo
-             JOIN merch_order_items mi ON mo.id = mi.order_id
-             JOIN merchandise m ON mi.merchandise_id = m.id
-             WHERE mo.id = $1
-             GROUP BY mo.id`,
+                    ) FILTER (WHERE m.id IS NOT NULL), 
+                    '[]'
+                ) as items
+            FROM merch_orders mo
+            LEFT JOIN merch_order_items mi ON mo.id = mi.order_id
+            LEFT JOIN merchandise m ON mi.merchandise_id = m.id
+            WHERE mo.id = $1
+            GROUP BY mo.id`,
             [id]
         );
 
@@ -643,7 +647,11 @@ app.get('/admin/merchandise/orders/:id', async (req, res) => {
             return res.status(404).json({ error: 'Order not found' });
         }
 
-        res.json(orderResult.rows[0]);
+        const order = orderResult.rows[0];
+        // Ensure items is never null
+        order.items = order.items || [];
+
+        res.json(order);
     } catch (error) {
         console.error('Error getting order details:', error);
         res.status(500).json({ error: error.message });
@@ -665,6 +673,53 @@ app.post('/admin/merchandise/add', upload.single('image'), async (req, res) => {
     } catch (error) {
         console.error('Error adding merchandise:', error);
         res.status(500).send('Error adding merchandise');
+    }
+});
+
+// Get single merchandise details
+app.get('/admin/merchandise/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(
+            'SELECT * FROM merchandise WHERE id = $1',
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Merchandise not found' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error getting merchandise:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Edit merchandise item in admin page
+app.post('/admin/merchandise/update', upload.single('image'), async (req, res) => {
+    try {
+        const { id, name, price } = req.body;
+        let query, values;
+
+        if (req.file) {
+            // If new image is uploaded
+            const imagePath = `/Pictures/${req.file.filename}`;
+            query = 'UPDATE merchandise SET name = $1, price = $2, image_path = $3 WHERE id = $4';
+            values = [name, price, imagePath, id];
+
+            // Optionally: Delete old image file here if needed
+        } else {
+            // If no new image
+            query = 'UPDATE merchandise SET name = $1, price = $2 WHERE id = $3';
+            values = [name, price, id];
+        }
+
+        await pool.query(query, values);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error updating merchandise:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 
