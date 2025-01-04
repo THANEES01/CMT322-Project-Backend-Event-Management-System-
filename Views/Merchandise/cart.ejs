@@ -257,184 +257,356 @@
     </div>
 
     <script>
-      const merchandiseData = JSON.parse('<%- merchandiseData %>');
-      const loadingOverlay = document.querySelector('.loading-overlay');
-  
-      document.addEventListener('DOMContentLoaded', function() {
-          loadCart();
-          updateSummary();
-          setupFormValidation();
-      });
-  
-      function setupFormValidation() {
-          const form = document.getElementById('collection-form');
-          const inputs = form.querySelectorAll('input');
-  
-          inputs.forEach(input => {
-              input.addEventListener('input', function() {
-                  validateField(this);
-              });
-          });
-      }
-  
-      function validateField(input) {
-          const errorDiv = document.getElementById(`${input.id}-error`);
-          errorDiv.style.display = 'none';
-          errorDiv.textContent = '';
-  
-          if (!input.checkValidity()) {
-              errorDiv.textContent = input.title || 'Please fill this field correctly';
-              errorDiv.style.display = 'block';
-              return false;
-          }
-          return true;
-      }
-  
-      function validateForm() {
-          const form = document.getElementById('collection-form');
-          const inputs = form.querySelectorAll('input');
-          let isValid = true;
-  
-          inputs.forEach(input => {
-              if (!validateField(input)) {
-                  isValid = false;
-              }
-          });
-  
-          return isValid;
-      }
-  
-      function getItemImage(name) {
-          const item = merchandiseData.find(m => m.name === name);
-          return item ? item.image_path : '/Pictures/default.jpg';
-      }
-  
-      function loadCart() {
-          const cart = JSON.parse(localStorage.getItem('cart')) || [];
-          const cartContainer = document.getElementById('cart-items');
-          const emptyCartMessage = document.getElementById('empty-cart-message');
-  
-          if (cart.length === 0) {
-              emptyCartMessage.style.display = 'block';
-              cartContainer.innerHTML = '';
-              return;
-          }
-  
-          emptyCartMessage.style.display = 'none';
-          cartContainer.innerHTML = cart.map((item, index) => `
-              <div class="cart-item">
-                  <div class="row align-items-center">
-                      <div class="col-md-2">
-                          <img src="${getItemImage(item.name)}" class="item-image" alt="${item.name}">
-                      </div>
-                      <div class="col-md-4">
-                          <h5 class="mb-0">${item.name}</h5>
-                          <p class="text-price mb-0">RM${item.price.toFixed(2)}</p>
-                      </div>
-                      <div class="col-md-3">
-                          <div class="quantity-control">
-                              <button class="quantity-btn minus" onclick="updateQuantity(${index}, -1)">-</button>
-                              <span>${item.quantity}</span>
-                              <button class="quantity-btn plus" onclick="updateQuantity(${index}, 1)">+</button>
-                          </div>
-                      </div>
-                      <div class="col-md-2">
-                          <p class="mb-0 text-price">RM${(item.price * item.quantity).toFixed(2)}</p>
-                      </div>
-                      <div class="col-md-1">
-                          <button class="remove-btn" onclick="removeItem(${index})">×</button>
-                      </div>
-                  </div>
-              </div>
-          `).join('');
-      }
-  
-      function updateQuantity(index, delta) {
-          const cart = JSON.parse(localStorage.getItem('cart')) || [];
-          if (index >= 0 && index < cart.length) {
-              cart[index].quantity = Math.max(1, cart[index].quantity + delta);
-              localStorage.setItem('cart', JSON.stringify(cart));
-              updateSummary();
-              loadCart();
-          }
-      }
-  
-      function removeItem(index) {
-          const cart = JSON.parse(localStorage.getItem('cart')) || [];
-          if (index >= 0 && index < cart.length) {
-              cart.splice(index, 1);
-              localStorage.setItem('cart', JSON.stringify(cart));
-              updateSummary();
-              loadCart();
-          }
-      }
-  
-      function updateSummary() {
-          const cart = JSON.parse(localStorage.getItem('cart')) || [];
-          const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-          document.getElementById('subtotal').textContent = `RM${total.toFixed(2)}`;
-          document.getElementById('total').textContent = `RM${total.toFixed(2)}`;
-      }
-  
-      document.getElementById('checkout-btn').addEventListener('click', async function() {
-        const cart = JSON.parse(localStorage.getItem('cart')) || [];
-    if (cart.length === 0) {
-        alert('Your cart is empty. Please add items before checking out.');
-        return;
-    }
-
-    if (!validateForm()) {
-        return;
-    }
-
-    loadingOverlay.style.display = 'flex';
-
-    const orderData = {
-        customerDetails: {
-            fullName: document.getElementById('fullName').value,
-            matricNumber: document.getElementById('matricNumber').value,
-            email: document.getElementById('email').value,
-            phone: document.getElementById('phone').value
-        },
-        items: cart.map(item => ({
-            id: merchandiseData.find(m => m.name === item.name)?.id,
-            name: item.name,
-            price: item.price,
-            quantity: item.quantity
-        })),
-        totalAmount: parseFloat(document.getElementById('total').textContent.replace('RM', ''))
-    };
-
-    try {
-        const response = await fetch('/api/merchandise/create-order', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
+        const merchandiseData = JSON.parse('<%- merchandiseData %>');
+        const loadingOverlay = document.querySelector('.loading-overlay');
+    
+        // Add stylesheet for validation alerts
+        const style = document.createElement('style');
+        style.textContent = `
+            .validation-alert {
+                background-color: #fff3cd;
+                border: 1px solid #ffeeba;
+                color: #856404;
+                padding: 12px;
+                margin-top: 5px;
+                border-radius: 4px;
+                display: flex;
+                align-items: center;
+            }
+            .validation-alert::before {
+                content: "!";
+                background-color: #856404;
+                color: white;
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                margin-right: 10px;
+                font-weight: bold;
+            }
+        `;
+        document.head.appendChild(style);
+    
+        // Input Validation and Sanitization Functions
+        const SecurityValidation = {
+            sanitizeText(input) {
+                if (typeof input !== 'string') return '';
+                return input
+                    .trim()
+                    .replace(/[<>]/g, '')
+                    .replace(/['"]/g, '')
+                    .replace(/[;]/g, '');
             },
-            body: JSON.stringify(orderData)
+    
+            validateName(name) {
+                const sanitizedName = this.sanitizeText(name);
+                const nameRegex = /^[A-Za-z\s'-]{2,50}$/;
+                return {
+                    isValid: nameRegex.test(sanitizedName),
+                    sanitized: sanitizedName
+                };
+            },
+    
+            validateEmail(email) {
+                const sanitizedEmail = this.sanitizeText(email);
+                const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+                return {
+                    isValid: emailRegex.test(sanitizedEmail),
+                    sanitized: sanitizedEmail
+                };
+            },
+    
+            validatePhone(phone) {
+                const sanitizedPhone = this.sanitizeText(phone);
+                const phoneRegex = /^(\+?6?01)[0-46-9]-*[0-9]{7,8}$/;
+                return {
+                    isValid: phoneRegex.test(sanitizedPhone),
+                    sanitized: sanitizedPhone
+                };
+            },
+    
+            validateMatric(matric) {
+                const sanitizedMatric = this.sanitizeText(matric);
+                const matricRegex = /^\d{6}$/;
+                return {
+                    isValid: matricRegex.test(sanitizedMatric),
+                    sanitized: sanitizedMatric
+                };
+            }
+        };
+    
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCart();
+            updateSummary();
+            setupFormValidation();
         });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-            throw new Error(result.message || 'Failed to create order');
+    
+        function setupFormValidation() {
+            const inputs = {
+                fullName: document.getElementById('fullName'),
+                matricNumber: document.getElementById('matricNumber'),
+                email: document.getElementById('email'),
+                phone: document.getElementById('phone')
+            };
+    
+            inputs.fullName.addEventListener('input', function() {
+                const validation = SecurityValidation.validateName(this.value);
+                let feedback = this.parentNode.querySelector('.validation-alert');
+                
+                if (!validation.isValid) {
+                    if (!feedback) {
+                        feedback = document.createElement('div');
+                        feedback.className = 'validation-alert';
+                        this.parentNode.appendChild(feedback);
+                    }
+                    feedback.textContent = 'Name must be 2-50 characters long and can only contain letters, spaces, hyphens or apostrophes';
+                    this.classList.add('is-invalid');
+                } else {
+                    if (feedback) feedback.remove();
+                    this.classList.remove('is-invalid');
+                }
+            });
+    
+            inputs.matricNumber.addEventListener('input', function() {
+                const validation = SecurityValidation.validateMatric(this.value);
+                let feedback = this.parentNode.querySelector('.validation-alert');
+                
+                if (!validation.isValid) {
+                    if (!feedback) {
+                        feedback = document.createElement('div');
+                        feedback.className = 'validation-alert';
+                        this.parentNode.appendChild(feedback);
+                    }
+                    feedback.textContent = 'Matric number must be exactly 6 digits';
+                    this.classList.add('is-invalid');
+                } else {
+                    if (feedback) feedback.remove();
+                    this.classList.remove('is-invalid');
+                }
+            });
+    
+            inputs.email.addEventListener('input', function() {
+                const validation = SecurityValidation.validateEmail(this.value);
+                let feedback = this.parentNode.querySelector('.validation-alert');
+                
+                if (!validation.isValid) {
+                    if (!feedback) {
+                        feedback = document.createElement('div');
+                        feedback.className = 'validation-alert';
+                        this.parentNode.appendChild(feedback);
+                    }
+                    feedback.textContent = 'Please include an "@" in the email address';
+                    this.classList.add('is-invalid');
+                } else {
+                    if (feedback) feedback.remove();
+                    this.classList.remove('is-invalid');
+                }
+            });
+    
+            inputs.phone.addEventListener('input', function() {
+                const validation = SecurityValidation.validatePhone(this.value);
+                let feedback = this.parentNode.querySelector('.validation-alert');
+                
+                if (!validation.isValid) {
+                    if (!feedback) {
+                        feedback = document.createElement('div');
+                        feedback.className = 'validation-alert';
+                        this.parentNode.appendChild(feedback);
+                    }
+                    feedback.textContent = 'Please enter a valid Malaysian phone number (e.g., 601X-XXXXXXX)';
+                    this.classList.add('is-invalid');
+                } else {
+                    if (feedback) feedback.remove();
+                    this.classList.remove('is-invalid');
+                }
+            });
         }
-
-        // Store clientSecret in sessionStorage for the payment page
-        if (result.clientSecret) {
-            sessionStorage.setItem('paymentClientSecret', result.clientSecret);
+    
+        function getItemImage(name) {
+            const item = merchandiseData.find(m => m.name === name);
+            return item ? item.image_path : '/Pictures/default.jpg';
         }
-
-        // Redirect to payment page
-        window.location.href = `/merchandise/payment/${result.orderId}`;
-
+    
+        function loadCart() {
+            const cart = JSON.parse(localStorage.getItem('cart')) || [];
+            const cartContainer = document.getElementById('cart-items');
+            const emptyCartMessage = document.getElementById('empty-cart-message');
+    
+            if (cart.length === 0) {
+                emptyCartMessage.style.display = 'block';
+                cartContainer.innerHTML = '';
+                return;
+            }
+    
+            emptyCartMessage.style.display = 'none';
+            cartContainer.innerHTML = cart.map((item, index) => `
+                <div class="cart-item">
+                    <div class="row align-items-center">
+                        <div class="col-md-2">
+                            <img src="${getItemImage(item.name)}" class="item-image" alt="${item.name}">
+                        </div>
+                        <div class="col-md-4">
+                            <h5 class="mb-0">${item.name}</h5>
+                            <p class="text-price mb-0">RM${item.price.toFixed(2)}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="quantity-control">
+                                <button class="quantity-btn minus" onclick="updateQuantity(${index}, -1)">-</button>
+                                <span>${item.quantity}</span>
+                                <button class="quantity-btn plus" onclick="updateQuantity(${index}, 1)">+</button>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <p class="mb-0 text-price">RM${(item.price * item.quantity).toFixed(2)}</p>
+                        </div>
+                        <div class="col-md-1">
+                            <button class="remove-btn" onclick="removeItem(${index})">×</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+    
+        function updateQuantity(index, delta) {
+            const cart = JSON.parse(localStorage.getItem('cart')) || [];
+            if (index >= 0 && index < cart.length) {
+                cart[index].quantity = Math.max(1, cart[index].quantity + delta);
+                localStorage.setItem('cart', JSON.stringify(cart));
+                updateSummary();
+                loadCart();
+            }
+        }
+    
+        function removeItem(index) {
+            const cart = JSON.parse(localStorage.getItem('cart')) || [];
+            if (index >= 0 && index < cart.length) {
+                cart.splice(index, 1);
+                localStorage.setItem('cart', JSON.stringify(cart));
+                updateSummary();
+                loadCart();
+            }
+        }
+    
+        function updateSummary() {
+            const cart = JSON.parse(localStorage.getItem('cart')) || [];
+            const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            document.getElementById('subtotal').textContent = `RM${total.toFixed(2)}`;
+            document.getElementById('total').textContent = `RM${total.toFixed(2)}`;
+        }
+    
+        function validateForm() {
+            const inputs = {
+                fullName: document.getElementById('fullName'),
+                matricNumber: document.getElementById('matricNumber'),
+                email: document.getElementById('email'),
+                phone: document.getElementById('phone')
+            };
+    
+            let isValid = true;
+    
+            const nameValidation = SecurityValidation.validateName(inputs.fullName.value);
+            const matricValidation = SecurityValidation.validateMatric(inputs.matricNumber.value);
+            const emailValidation = SecurityValidation.validateEmail(inputs.email.value);
+            const phoneValidation = SecurityValidation.validatePhone(inputs.phone.value);
+    
+            if (!nameValidation.isValid) {
+                isValid = false;
+                showError(inputs.fullName, 'Name must be 2-50 characters long and can only contain letters, spaces, hyphens or apostrophes');
+            }
+    
+            if (!matricValidation.isValid) {
+                isValid = false;
+                showError(inputs.matricNumber, 'Matric number must be exactly 6 digits');
+            }
+    
+            if (!emailValidation.isValid) {
+                isValid = false;
+                showError(inputs.email, 'Please enter a valid email address');
+            }
+    
+            if (!phoneValidation.isValid) {
+                isValid = false;
+                showError(inputs.phone, 'Please enter a valid Malaysian phone number');
+            }
+    
+            return isValid;
+        }
+    
+        function showError(input, message) {
+            let feedback = input.parentNode.querySelector('.validation-alert');
+            if (!feedback) {
+                feedback = document.createElement('div');
+                feedback.className = 'validation-alert';
+                input.parentNode.appendChild(feedback);
+            }
+            feedback.textContent = message;
+            input.classList.add('is-invalid');
+        }
+    
+        document.getElementById('checkout-btn').addEventListener('click', async function() {
+            const cart = JSON.parse(localStorage.getItem('cart')) || [];
+            if (cart.length === 0) {
+                alert('Your cart is empty. Please add items before checking out.');
+                return;
+            }
+    
+            if (!validateForm()) {
+                return;
+            }
+    
+            loadingOverlay.style.display = 'flex';
+    
+            const nameValidation = SecurityValidation.validateName(document.getElementById('fullName').value);
+            const matricValidation = SecurityValidation.validateMatric(document.getElementById('matricNumber').value);
+            const emailValidation = SecurityValidation.validateEmail(document.getElementById('email').value);
+            const phoneValidation = SecurityValidation.validatePhone(document.getElementById('phone').value);
+    
+            const orderData = {
+                customerDetails: {
+                    fullName: nameValidation.sanitized,
+                    matricNumber: matricValidation.sanitized,
+                    email: emailValidation.sanitized,
+                    phone: phoneValidation.sanitized
+                },
+                items: cart.map(item => ({
+                    id: merchandiseData.find(m => m.name === item.name)?.id,
+                    name: SecurityValidation.sanitizeText(item.name),
+                    price: parseFloat(item.price),
+                    quantity: parseInt(item.quantity)
+                })),
+                totalAmount: parseFloat(document.getElementById('total').textContent.replace('RM', ''))
+            };
+    
+            try {
+                const response = await fetch('/api/merchandise/create-order', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(orderData)
+                });
+    
+                const result = await response.json();
+    
+                if (!response.ok) {
+                    throw new Error(result.message || 'Failed to create order');
+                }
+    
+                if (result.clientSecret) {
+                    sessionStorage.setItem('paymentClientSecret', result.clientSecret);
+                }
+    
+                window.location.href = `/merchandise/payment/${result.orderId}`;
+    
             } catch (error) {
                 alert('There was an error processing your order: ' + error.message);
                 console.error('Error:', error);
             } finally {
                 loadingOverlay.style.display = 'none';
             }
-      });
-  </script>
+        });
+    </script>
 </body>
 </html>

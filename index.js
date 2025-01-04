@@ -41,6 +41,31 @@ app.set('views', path.join(__dirname, 'views'));
 // Serve static files
 app.use(express.static('Public')); // Notice the capital 'P' to match your folder structure
 
+// // Serve login page
+// app.get('/admin/login', (req, res) => {
+//     // Redirect to admin dashboard if already logged in
+//     if (req.cookies.adminToken) {
+//         try {
+//             const decoded = jwt.verify(req.cookies.adminToken, process.env.JWT_SECRET);
+//             return res.redirect('/admin');
+//         } catch (error) {
+//             // Clear invalid token
+//             res.clearCookie('adminToken');
+//         }
+//     }
+//     res.render('admin/login');
+// });
+
+// // Protect all other admin routes
+// app.use('/admin', (req, res, next) => {
+//     // Skip login route
+//     if (req.path === '/login') {
+//         return next();
+//     }
+    
+//     verifyToken(req, res, next);
+// });
+
 // Routes
 app.get('/', (req, res) => {
     res.render('Home/landing', {

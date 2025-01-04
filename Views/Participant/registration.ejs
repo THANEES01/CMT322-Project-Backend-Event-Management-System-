@@ -162,7 +162,7 @@
     </button>
     <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
       <ul class="navbar-nav ms-auto">
-        <li class="nav-item"><a class="nav-link" href="#about">About</a></li>
+        <li class="nav-item"><a class="nav-link" href="/">About</a></li>
         <li class="nav-item"><a class="nav-link" href="/registration">Participants</a></li>
         <li class="nav-item"><a class="nav-link" href="/merchandise">Merchandise</a></li>
         <li class="nav-item"><a class="nav-link" href="/tickets">Tickets</a></li>
@@ -211,173 +211,323 @@
   <script>
     let memberCount = 1;
 
-    document.getElementById('category').addEventListener('change', function() {
-      const participantFields = document.getElementById('participant-fields');
-      const groupControls = document.getElementById('group-controls');
-      participantFields.innerHTML = '';
-      memberCount = 1;
-
-      const isGroup = this.value === 'group';
-      const title = isGroup ? 'Team Leader' : 'Participant';
-      
-      participantFields.appendChild(createParticipantCard(1, title));
-      groupControls.style.display = isGroup ? 'block' : 'none';
-    });
-
-    function createParticipantCard(index, title) {
-      const card = document.createElement('div');
-      card.classList.add('card', 'mb-3');
-      card.id = `member-card-${index}`;
-      
-      card.innerHTML = `
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center">
-            <h5 class="card-title">${title}</h5>
-            ${index > 1 ? `<button type="button" class="btn btn-danger btn-sm" onclick="removeMember(${index})">Remove</button>` : ''}
-          </div>
-          <div class="row">
-            <div class="col-md-6 form-group">
-              <label for="name-${index}">Full Name</label>
-              <input type="text" class="form-control" id="name-${index}" name="name-${index}" required>
-            </div>
-            <div class="col-md-6 form-group">
-              <label for="matric-${index}">Matric Number</label>
-              <input type="text" class="form-control" id="matric-${index}" name="matric-${index}" required>
-            </div>
-            <div class="col-md-6 form-group">
-              <label for="email-${index}">Email</label>
-              <input type="email" class="form-control" id="email-${index}" name="email-${index}" required>
-            </div>
-            <div class="col-md-3 form-group">
-              <label for="gender-${index}">Gender</label>
-              <select class="form-control" id="gender-${index}" name="gender-${index}" required>
-                <option value="">Select Gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div class="col-md-3 form-group">
-              <label for="age-${index}">Age</label>
-              <input type="number" class="form-control" id="age-${index}" name="age-${index}" min="18" required>
-            </div>
-          </div>
-        </div>
-      `;
-      return card;
+// Add stylesheet for validation alerts
+const style = document.createElement('style');
+style.textContent = `
+    .validation-alert {
+        background-color: #fff3cd;
+        border: 1px solid #ffeeba;
+        color: #856404;
+        padding: 12px;
+        margin-top: 5px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
     }
+    .validation-alert::before {
+        content: "!";
+        background-color: #856404;
+        color: white;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 10px;
+        font-weight: bold;
+    }
+`;
+document.head.appendChild(style);
 
-    document.getElementById('add-member').addEventListener('click', function() {
-      memberCount++;
-      if (memberCount <= 5) {
+document.getElementById('category').addEventListener('change', function() {
+    const participantFields = document.getElementById('participant-fields');
+    const groupControls = document.getElementById('group-controls');
+    participantFields.innerHTML = '';
+    memberCount = 1;
+
+    const isGroup = this.value === 'group';
+    const title = isGroup ? 'Team Leader' : 'Participant';
+    
+    participantFields.appendChild(createParticipantCard(1, title));
+    groupControls.style.display = isGroup ? 'block' : 'none';
+});
+
+function createParticipantCard(index, title) {
+    const card = document.createElement('div');
+    card.classList.add('card', 'mb-3');
+    card.id = `member-card-${index}`;
+    
+    card.innerHTML = `
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="card-title">${title}</h5>
+                ${index > 1 ? `<button type="button" class="btn btn-danger btn-sm" onclick="removeMember(${index})">Remove</button>` : ''}
+            </div>
+            <div class="row">
+                <div class="col-md-6 form-group">
+                    <label for="name-${index}">Full Name</label>
+                    <input type="text" class="form-control" id="name-${index}" name="name-${index}" required>
+                </div>
+                <div class="col-md-6 form-group">
+                    <label for="matric-${index}">Matric Number</label>
+                    <input type="text" class="form-control" id="matric-${index}" name="matric-${index}" required>
+                </div>
+                <div class="col-md-6 form-group">
+                    <label for="email-${index}">Email</label>
+                    <input type="email" class="form-control" id="email-${index}" name="email-${index}" required>
+                </div>
+                <div class="col-md-3 form-group">
+                    <label for="gender-${index}">Gender</label>
+                    <select class="form-control" id="gender-${index}" name="gender-${index}" required>
+                        <option value="">Select Gender</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="col-md-3 form-group">
+                    <label for="age-${index}">Age</label>
+                    <input type="number" class="form-control" id="age-${index}" name="age-${index}" min="18" required>
+                </div>
+            </div>
+        </div>
+    `;
+    return card;
+}
+
+document.getElementById('add-member').addEventListener('click', function() {
+    memberCount++;
+    if (memberCount <= 5) {
         const participantFields = document.getElementById('participant-fields');
         participantFields.appendChild(createParticipantCard(memberCount, `Team Member ${memberCount}`));
-      }
-      if (memberCount === 5) {
+    }
+    if (memberCount === 5) {
         this.style.display = 'none';
-      }
+    }
+});
+
+function removeMember(index) {
+    const card = document.getElementById(`member-card-${index}`);
+    card.remove();
+    memberCount--;
+    document.getElementById('add-member').style.display = 'block';
+}
+
+const SecurityValidation = {
+    sanitizeText(input) {
+        if (typeof input !== 'string') return '';
+        return input
+            .trim()
+            .replace(/[<>]/g, '')
+            .replace(/['"]/g, '')
+            .replace(/[;]/g, '');
+    },
+
+    validateEmail(email) {
+        const sanitizedEmail = this.sanitizeText(email);
+        const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+        return {
+            isValid: emailRegex.test(sanitizedEmail),
+            sanitized: sanitizedEmail
+        };
+    },
+
+    validateMatric(matric) {
+        const sanitizedMatric = this.sanitizeText(matric);
+        const matricRegex = /^\d{6}$/;
+        return {
+            isValid: matricRegex.test(sanitizedMatric),
+            sanitized: sanitizedMatric
+        };
+    },
+
+    validateName(name) {
+        const sanitizedName = this.sanitizeText(name);
+        const nameRegex = /^[A-Za-z\s'-]{2,50}$/;
+        return {
+            isValid: nameRegex.test(sanitizedName),
+            sanitized: sanitizedName
+        };
+    },
+
+    validateAge(age) {
+        const numAge = parseInt(age);
+        return {
+            isValid: !isNaN(numAge) && numAge >= 18 && numAge <= 100,
+            sanitized: numAge
+        };
+    },
+
+    validateTeamName(teamName) {
+        const sanitizedTeamName = this.sanitizeText(teamName);
+        const teamNameRegex = /^[A-Za-z0-9\s'-]{2,30}$/;
+        return {
+            isValid: teamNameRegex.test(sanitizedTeamName),
+            sanitized: sanitizedTeamName
+        };
+    }
+};
+
+// Add real-time validation feedback
+function addInputValidation() {
+    document.getElementById('team-name').addEventListener('input', function() {
+        const validation = SecurityValidation.validateTeamName(this.value);
+        let feedback = this.parentNode.querySelector('.validation-alert');
+        
+        if (!validation.isValid) {
+            if (!feedback) {
+                feedback = document.createElement('div');
+                feedback.className = 'validation-alert';
+                this.parentNode.appendChild(feedback);
+            }
+            feedback.textContent = 'Team Name must be 2-30 characters long and can only contain letters, numbers, spaces, hyphens or apostrophes';
+            this.classList.add('is-invalid');
+        } else {
+            if (feedback) feedback.remove();
+            this.classList.remove('is-invalid');
+        }
     });
 
-    function removeMember(index) {
-      const card = document.getElementById(`member-card-${index}`);
-      card.remove();
-      memberCount--;
-      document.getElementById('add-member').style.display = 'block';
-    }
+    document.getElementById('participant-fields').addEventListener('input', function(e) {
+        const input = e.target;
+        if (!input.id) return;
 
-    document.getElementById('registration-form').addEventListener('submit', async function(event) {
-      event.preventDefault();
-      if (!validateForm()) {
-        return;
-      }
+        let feedback = input.parentNode.querySelector('.validation-alert');
 
-      const submitButton = document.getElementById('submit-button');
-      const loadingSpinner = document.querySelector('.loading-spinner');
-      const errorMessage = document.getElementById('error-message');
-      const successMessage = document.getElementById('success-message');
+        if (input.id.startsWith('name-')) {
+            const validation = SecurityValidation.validateName(input.value);
+            if (!validation.isValid) {
+                if (!feedback) {
+                    feedback = document.createElement('div');
+                    feedback.className = 'validation-alert';
+                    input.parentNode.appendChild(feedback);
+                }
+                feedback.textContent = 'Name must be 2-50 characters long and can only contain letters, spaces, hyphens or apostrophes';
+                input.classList.add('is-invalid');
+            } else {
+                if (feedback) feedback.remove();
+                input.classList.remove('is-invalid');
+            }
+        }
+        
+        else if (input.id.startsWith('matric-')) {
+            const validation = SecurityValidation.validateMatric(input.value);
+            if (!validation.isValid) {
+                if (!feedback) {
+                    feedback = document.createElement('div');
+                    feedback.className = 'validation-alert';
+                    input.parentNode.appendChild(feedback);
+                }
+                feedback.textContent = 'Matric number must be exactly 6 digits';
+                input.classList.add('is-invalid');
+            } else {
+                if (feedback) feedback.remove();
+                input.classList.remove('is-invalid');
+            }
+        }
+        
+        else if (input.id.startsWith('email-')) {
+            const validation = SecurityValidation.validateEmail(input.value);
+            if (!validation.isValid) {
+                if (!feedback) {
+                    feedback = document.createElement('div');
+                    feedback.className = 'validation-alert';
+                    input.parentNode.appendChild(feedback);
+                }
+                feedback.textContent = 'Please include an "@" in the email address';
+                input.classList.add('is-invalid');
+            } else {
+                if (feedback) feedback.remove();
+                input.classList.remove('is-invalid');
+            }
+        }
+        
+        else if (input.id.startsWith('age-')) {
+            const validation = SecurityValidation.validateAge(input.value);
+            if (!validation.isValid) {
+                if (!feedback) {
+                    feedback = document.createElement('div');
+                    feedback.className = 'validation-alert';
+                    input.parentNode.appendChild(feedback);
+                }
+                feedback.textContent = 'Age must be between 18 and 100 years';
+                input.classList.add('is-invalid');
+            } else {
+                if (feedback) feedback.remove();
+                input.classList.remove('is-invalid');
+            }
+        }
+    });
+}
 
-      submitButton.disabled = true;
-      loadingSpinner.style.display = 'inline-block';
-      errorMessage.style.display = 'none';
-      successMessage.style.display = 'none';
+document.addEventListener('DOMContentLoaded', addInputValidation);
 
-      try {
-        const category = document.getElementById('category').value;
-        const teamName = document.getElementById('team-name').value;
+// Form submission handling
+document.getElementById('registration-form').addEventListener('submit', async function(event) {
+    event.preventDefault();
+    const submitButton = document.getElementById('submit-button');
+    const loadingSpinner = document.querySelector('.loading-spinner');
+    const errorMessage = document.getElementById('error-message');
+    const successMessage = document.getElementById('success-message');
+
+    submitButton.disabled = true;
+    loadingSpinner.style.display = 'inline-block';
+    errorMessage.style.display = 'none';
+    successMessage.style.display = 'none';
+
+    try {
+        const category = SecurityValidation.sanitizeText(document.getElementById('category').value);
+        const teamName = SecurityValidation.validateTeamName(document.getElementById('team-name').value).sanitized;
         
         const participants = [];
         for (let i = 1; i <= memberCount; i++) {
-          participants.push({
-            name: document.getElementById(`name-${i}`).value,
-            matric: document.getElementById(`matric-${i}`).value,
-            email: document.getElementById(`email-${i}`).value,
-            gender: document.getElementById(`gender-${i}`).value,
-            age: parseInt(document.getElementById(`age-${i}`).value)
-          });
+            const nameValidation = SecurityValidation.validateName(document.getElementById(`name-${i}`).value);
+            const emailValidation = SecurityValidation.validateEmail(document.getElementById(`email-${i}`).value);
+            const matricValidation = SecurityValidation.validateMatric(document.getElementById(`matric-${i}`).value);
+            const ageValidation = SecurityValidation.validateAge(document.getElementById(`age-${i}`).value);
+            
+            participants.push({
+                name: nameValidation.sanitized,
+                matric: matricValidation.sanitized,
+                email: emailValidation.sanitized,
+                gender: SecurityValidation.sanitizeText(document.getElementById(`gender-${i}`).value),
+                age: ageValidation.sanitized
+            });
         }
 
         const response = await fetch('/participant/register', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            teamName,
-            category,
-            participants
-          })
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                teamName,
+                category,
+                participants
+            })
         });
 
         const result = await response.json();
 
         if (result.success) {
-          successMessage.textContent = 'Registration successful! Redirecting to payment...';
-          successMessage.style.display = 'block';
-          window.location.href = result.data.redirectUrl;
+            successMessage.textContent = 'Registration successful! Redirecting to payment...';
+            successMessage.style.display = 'block';
+            window.location.href = result.data.redirectUrl;
         } else {
-          throw new Error(result.message || 'Registration failed');
+            throw new Error(result.message || 'Registration failed');
         }
 
-      } catch (error) {
+    } catch (error) {
         console.error('Registration error:', error);
         errorMessage.textContent = error.message || 'Registration failed. Please try again.';
         errorMessage.style.display = 'block';
         submitButton.disabled = false;
-      } finally {
+    } finally {
         loadingSpinner.style.display = 'none';
-      }
-    });
-
-    function validateForm() {
-      const form = document.getElementById('registration-form');
-      const inputs = form.querySelectorAll('input[required], select[required]');
-      let isValid = true;
-
-      inputs.forEach(input => {
-        if (!input.value.trim()) {
-          input.classList.add('is-invalid');
-          isValid = false;
-        } else {
-          input.classList.remove('is-invalid');
-        }
-
-        if (input.type === 'number' && input.id.startsWith('age')) {
-          const age = parseInt(input.value);
-          if (age < 18) {
-            input.classList.add('is-invalid');
-            isValid = false;
-          }
-        }
-      });
-
-      if (!isValid) {
-        document.getElementById('error-message').textContent = 'Please fill in all required fields correctly. Age must be 18 or above.';
-        document.getElementById('error-message').style.display = 'block';
-      }
-
-      return isValid;
     }
-  </script>
+});
+</script>
 
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.7/dist/umd/popper.min.js"></script>
