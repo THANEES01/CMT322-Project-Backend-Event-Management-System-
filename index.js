@@ -6,11 +6,15 @@ import pool from './db.js';
 import path from 'path';
 import multer from 'multer';  // Import multer for handling file uploads.
 import { fileURLToPath } from 'url';
+//for login (session management)
+import session from 'express-session';
+import rateLimit from 'express-rate-limit'; //Import rate limit package
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 
 // Multer configuration
 const storage = multer.diskStorage({
@@ -19,6 +23,24 @@ const storage = multer.diskStorage({
     },
     filename: function (req, file, cb) {
         cb(null, Date.now() + '-' + file.originalname)
+    }
+});
+
+// Login Rate Limiter
+const loginLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 2,                   // 5 login attempts
+    message: {
+        status: 'error',
+        message: 'Too many login attempts. Please try again after 15 minutes'
+    },
+    standardHeaders: true,    // Return rate limit info in headers
+    legacyHeaders: false,     // Disable X-RateLimit-* headers
+    handler: (req, res) => {
+        res.status(429).json({
+            success: false,
+            message: 'Too many login attempts. Please try again after 15 minutes'
+        });
     }
 });
 
@@ -34,6 +56,20 @@ const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Session middleware 
+app.use(session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: { 
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,                    // Prevents client-side JS access
+        maxAge: 24 * 60 * 60 * 1000,       // Session expires in 24 hours
+        // maxAge: 1 * 60 * 1000,          // For testing, session expires in 1 minute
+        sameSite: 'strict'                 // CSRF protection
+    }
+}));
+
 // Set EJS as the view engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -41,30 +77,70 @@ app.set('views', path.join(__dirname, 'views'));
 // Serve static files
 app.use(express.static('Public')); // Notice the capital 'P' to match your folder structure
 
-// // Serve login page
-// app.get('/admin/login', (req, res) => {
-//     // Redirect to admin dashboard if already logged in
-//     if (req.cookies.adminToken) {
-//         try {
-//             const decoded = jwt.verify(req.cookies.adminToken, process.env.JWT_SECRET);
-//             return res.redirect('/admin');
-//         } catch (error) {
-//             // Clear invalid token
-//             res.clearCookie('adminToken');
-//         }
-//     }
-//     res.render('admin/login');
-// });
+// Admin Login and Logout
 
-// // Protect all other admin routes
-// app.use('/admin', (req, res, next) => {
-//     // Skip login route
-//     if (req.path === '/login') {
-//         return next();
-//     }
+// Predefined admin credentials
+const ADMIN_CREDENTIALS = {
+    username: 'admin',
+    password: 'admin123',
+    email: 'admin@kalakshetra.com'
+};
+
+
+// Admin login page
+app.get('/admin/login', (req, res) => {
+    if (req.session.adminId) {
+        return res.redirect('/admin/adminpage');
+    }
+    res.render('admin/login');
+});
+
+// Admin login route
+app.post('/admin/login', loginLimiter, (req, res) => {
+    const { username, password } = req.body;
     
-//     verifyToken(req, res, next);
-// });
+    console.log('Login attempt:', { username, password }); // For debugging
+
+    if (username === ADMIN_CREDENTIALS.username && 
+        password === ADMIN_CREDENTIALS.password) {
+        
+        // Set session
+        req.session.adminId = 1;
+        req.session.username = username;
+
+        // Reset rate limit on successful login (optional)
+        req.rateLimit.resetKey(req.ip);
+
+        res.json({
+            success: true,
+            redirect: '/admin/adminpage' // Make sure this matches your route
+        });
+    } else {
+        res.json({
+            success: false,
+            message: 'Invalid credentials'
+        });
+    }
+});
+
+// Admin logout
+app.get('/admin/logout', (req, res) => {
+    req.session.destroy();
+    res.redirect('/admin/login');
+});
+
+// Middleware to protect admin routes
+const requireAdmin = (req, res, next) => {
+    if (!req.session.adminId) {
+        return res.redirect('/admin/login');
+    }
+    next();
+};
+
+// Apply middleware to admin routes
+app.use('/admin/adminpage', requireAdmin);
+app.use('/admin/merchandise', requireAdmin);
+app.use('/admin/audience', requireAdmin);
 
 // Routes
 app.get('/', (req, res) => {
@@ -460,7 +536,7 @@ app.get('/payment-failed', (req, res) => {
 });
 
 //route for admin page
-app.get('/admin', async (req, res) => {
+app.get('/admin/adminpage', async (req, res) => {
     try {
         // Get individual registrations
         const individualRegistrations = await pool.query(
