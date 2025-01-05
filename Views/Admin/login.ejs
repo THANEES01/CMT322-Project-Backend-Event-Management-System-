@@ -73,6 +73,31 @@
             text-align: center;
             margin-top: 1rem;
         }
+
+        .error-message .alert {
+            margin-bottom: 0;
+            padding: 10px 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .error-message .alert-warning {
+            background-color: rgba(255, 193, 7, 0.2);
+            border-color: #ffc107;
+            color: #fff;
+        }
+
+        .error-message .alert-danger {
+            background-color: rgba(220, 53, 69, 0.2);
+            border-color: #dc3545;
+            color: #fff;
+        }
+
+        .error-message .alert-info {
+            background-color: rgba(23, 162, 184, 0.2);
+            border-color: #17a2b8;
+            color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -95,41 +120,78 @@
     </div>
 
     <script>
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const credentials = {
-                username: document.getElementById('username').value,
-                password: document.getElementById('password').value
-            };
+       document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const credentials = {
+        username: document.getElementById('username').value,
+        password: document.getElementById('password').value
+    };
 
-            try {
-                const response = await fetch('/admin/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(credentials)
-                });
+    const errorMessageElement = document.getElementById('error-message');
+    const loginForm = document.getElementById('loginForm');
+    const submitButton = loginForm.querySelector('button[type="submit"]');
 
-                  // Check if rate limited
-                if (response.status === 429) {
-                        document.getElementById('error-message').textContent = 
-                            'Too many login attempts. Please try again later.';
-                        return;
-                    }
-
-                const data = await response.json();
-
-                if (data.success) {
-                    window.location.href = '/admin/adminpage';
-                } else {
-                    document.getElementById('error-message').textContent = 'Invalid credentials';
-                }
-            } catch (error) {
-                document.getElementById('error-message').textContent = 'An error occurred. Please try again.';
-            }
+    try {
+        const response = await fetch('/admin/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(credentials)
         });
+
+        const data = await response.json();
+
+        if (response.status === 429) {
+            // Rate limit exceeded
+            errorMessageElement.innerHTML = `
+                <div class="alert alert-danger">
+                    ${data.message}<br/>
+                </div>
+            `;
+            submitButton.disabled = true;
+            
+            // Re-enable the form after 1 minute
+            setTimeout(() => {
+                submitButton.disabled = false;
+                errorMessageElement.innerHTML = `
+                    <div class="alert alert-info">
+                        You can try logging in again now.
+                    </div>
+                `;
+            }, 60000);
+
+        } else if (response.status === 401) {
+            // Invalid credentials
+            let message = data.message;
+            if (data.attemptsRemaining > 0) {
+                message += ` You have ${data.attemptsRemaining} attempt${data.attemptsRemaining === 1 ? '' : 's'} remaining.`;
+            }
+            
+            errorMessageElement.innerHTML = `
+                <div class="alert alert-warning">
+                    ${message}
+                </div>
+            `;
+            
+            // Clear the password field but keep the username
+            document.getElementById('password').value = '';
+            document.getElementById('password').focus();
+
+        } else if (data.success) {
+            // Successful login
+            window.location.href = data.redirect;
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        errorMessageElement.innerHTML = `
+            <div class="alert alert-danger">
+                An error occurred. Please try again.
+            </div>
+        `;
+    }
+});
     </script>
 </body>
 </html>

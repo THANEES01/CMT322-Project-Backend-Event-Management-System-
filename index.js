@@ -3,48 +3,128 @@ import * as dotenv from 'dotenv';
 import express from 'express';
 import Stripe from 'stripe';
 import pool from './db.js';
-import path from 'path';
-import multer from 'multer';  // Import multer for handling file uploads.
 import { fileURLToPath } from 'url';
 //for login (session management)
 import session from 'express-session';
 import rateLimit from 'express-rate-limit'; //Import rate limit package
+// Secure File Upload Configuration
+import multer from 'multer';
+import path from 'path';
+import crypto from 'crypto';
+import fs from 'fs/promises';
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Secure File Upload Configuration
+// Allowed file types and size
+const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
 
 // Multer configuration
 const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'public/Pictures')
+    destination: async (req, file, cb) => {
+        const uploadDir = 'public/Pictures/merchandise';
+        try {
+            await fs.access(uploadDir);
+        } catch {
+            await fs.mkdir(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
     },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + '-' + file.originalname)
+    filename: (req, file, cb) => {
+        // Generate random filename with original extension
+        const randomName = crypto.randomBytes(32).toString('hex');
+        const fileExt = path.extname(file.originalname).toLowerCase();
+        cb(null, `${randomName}${fileExt}`);
     }
 });
+
+// File filter function
+const fileFilter = (req, file, cb) => {
+    // Check MIME type
+    if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+        cb(new Error('Invalid file type. Only JPEG, PNG, and WebP images are allowed.'), false);
+        return;
+    }
+
+    // Check original filename for security
+    const sanitizedFilename = path.basename(file.originalname).replace(/[^a-zA-Z0-9.-]/g, '');
+    if (sanitizedFilename !== file.originalname) {
+        cb(new Error('Invalid filename characters'), false);
+        return;
+    }
+
+    cb(null, true);
+};
+
+// Configure multer with security settings
+const upload = multer({
+    storage: storage,
+    fileFilter: fileFilter,
+    limits: {
+        fileSize: MAX_FILE_SIZE,
+        files: 1
+    }
+});
+
+// Middleware for file validation
+const validateImage = async (req, res, next) => {
+    if (!req.file) {
+        return next();
+    }
+
+    try {
+        // Additional security checks can be added here
+        const fileBuffer = await fs.readFile(req.file.path);
+        const fileSignature = fileBuffer.toString('hex', 0, 4);
+
+        // Check file signatures (magic numbers)
+        const validSignatures = {
+            'ffd8ffe0': 'image/jpeg', // JPEG
+            '89504e47': 'image/png',  // PNG
+            '52494646': 'image/webp'  // WebP
+        };
+
+        let isValidSignature = false;
+        for (let [signature, mimeType] of Object.entries(validSignatures)) {
+            if (fileBuffer.toString('hex', 0, 4).includes(signature)) {
+                isValidSignature = true;
+                break;
+            }
+        }
+
+        if (!isValidSignature) {
+            await fs.unlink(req.file.path);
+            throw new Error('Invalid file content');
+        }
+
+        next();
+    } catch (error) {
+        next(error);
+    }
+};
 
 // Login Rate Limiter
 const loginLimiter = rateLimit({
-    windowMs: 1 * 60 * 1000, // 1 minute
-    max: 2,                   // 5 login attempts
-    message: {
-        status: 'error',
-        message: 'Too many login attempts. Please try again after 15 minutes'
-    },
-    standardHeaders: true,    // Return rate limit info in headers
-    legacyHeaders: false,     // Disable X-RateLimit-* headers
+    windowMs: 1 * 60 * 1000, // 1 minute window
+    max: 2, // 2 attempts per window
+    standardHeaders: true,
+    legacyHeaders: false,
     handler: (req, res) => {
         res.status(429).json({
             success: false,
-            message: 'Too many login attempts. Please try again after 15 minutes'
+            message: 'Too many login attempts. Please try again after 1 minute',
+            attemptsRemaining: 0
         });
-    }
+    },
+    skipSuccessfulRequests: true,
+    keyGenerator: (req) => req.ip // Use IP address as key
 });
 
-const upload = multer({ storage: storage });
 
 const port = process.env.PORT;
 
@@ -64,8 +144,8 @@ app.use(session({
     cookie: { 
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,                    // Prevents client-side JS access
-        maxAge: 24 * 60 * 60 * 1000,       // Session expires in 24 hours
-        // maxAge: 1 * 60 * 1000,          // For testing, session expires in 1 minute
+        // maxAge: 24 * 60 * 60 * 1000,       // Session expires in 24 hours
+        maxAge: 1 * 60 * 1000,          // For testing, session expires in 1 minute
         sameSite: 'strict'                 // CSRF protection
     }
 }));
@@ -99,7 +179,7 @@ app.get('/admin/login', (req, res) => {
 app.post('/admin/login', loginLimiter, (req, res) => {
     const { username, password } = req.body;
     
-    console.log('Login attempt:', { username, password }); // For debugging
+    console.log('Login attempt:', { username }); // Log username but not password for security
 
     if (username === ADMIN_CREDENTIALS.username && 
         password === ADMIN_CREDENTIALS.password) {
@@ -108,17 +188,22 @@ app.post('/admin/login', loginLimiter, (req, res) => {
         req.session.adminId = 1;
         req.session.username = username;
 
-        // Reset rate limit on successful login (optional)
-        req.rateLimit.resetKey(req.ip);
-
         res.json({
             success: true,
-            redirect: '/admin/adminpage' // Make sure this matches your route
+            redirect: '/admin/adminpage'
         });
     } else {
-        res.json({
+        // Calculate attempts remaining
+        const attemptsRemaining = Math.max(
+            0, 
+            2 - (req.rateLimit ? req.rateLimit.current : 0)
+        );
+
+        res.status(401).json({
             success: false,
-            message: 'Invalid credentials'
+            message: 'Invalid credentials. Please try again.',
+            attemptsRemaining: attemptsRemaining,
+            retryAfter: attemptsRemaining === 0 ? 60 : null // 60 seconds if no attempts left
         });
     }
 });
@@ -760,22 +845,41 @@ app.get('/admin/merchandise/orders/:id', async (req, res) => {
 });
 
 // Handle merchandise image upload and creation
-app.post('/admin/merchandise/add', upload.single('image'), async (req, res) => {
+app.post('/admin/merchandise/add', upload.single('image'),  validateImage, async (req, res) => {
     try {
         const { name, price } = req.body;
-        const imagePath = `/Pictures/${req.file.filename}`;
 
+        // Validate input
+        if (!name || !price || !req.file) {
+            throw new Error('Missing required fields');
+        }
+
+        // Sanitize inputs
+        const sanitizedName = name.trim().replace(/[<>]/g, '');
+        const sanitizedPrice = parseFloat(price);
+
+        // Generate secure file path
+        const imagePath = `/Pictures/merchandise/${req.file.filename}`;
+
+        // Save to database using parameterized query
         await pool.query(
             'INSERT INTO merchandise (name, price, image_path) VALUES ($1, $2, $3)',
-            [name, price, imagePath]
+            [sanitizedName, sanitizedPrice, imagePath]
         );
 
         res.redirect('/admin/merchandise');
     } catch (error) {
-        console.error('Error adding merchandise:', error);
-        res.status(500).send('Error adding merchandise');
+        // Clean up uploaded file if database operation fails
+        if (req.file) {
+            await fs.unlink(req.file.path).catch(console.error);
+        }
+        res.status(500).render('error', {
+            message: 'Error adding merchandise',
+            error: error.message
+        });
     }
-});
+}
+);
 
 // Get single merchandise details
 app.get('/admin/merchandise/:id', async (req, res) => {
@@ -798,28 +902,48 @@ app.get('/admin/merchandise/:id', async (req, res) => {
 });
 
 // Edit merchandise item in admin page
-app.post('/admin/merchandise/update', upload.single('image'), async (req, res) => {
+app.post('/admin/merchandise/update', upload.single('image'), validateImage, async (req, res) => {
     try {
         const { id, name, price } = req.body;
+
+        // Validate input
+        if (!id || !name || !price) {
+            throw new Error('Missing required fields');
+        }
+
+        // Sanitize inputs
+        const sanitizedName = name.trim().replace(/[<>]/g, '');
+        const sanitizedPrice = parseFloat(price);
+
         let query, values;
 
         if (req.file) {
-            // If new image is uploaded
-            const imagePath = `/Pictures/${req.file.filename}`;
-            query = 'UPDATE merchandise SET name = $1, price = $2, image_path = $3 WHERE id = $4';
-            values = [name, price, imagePath, id];
+            // Get old image path
+            const oldImageResult = await pool.query(
+                'SELECT image_path FROM merchandise WHERE id = $1',
+                [id]
+            );
 
-            // Optionally: Delete old image file here if needed
+            if (oldImageResult.rows.length > 0) {
+                const oldImagePath = path.join('public', oldImageResult.rows[0].image_path);
+                await fs.unlink(oldImagePath).catch(console.error);
+            }
+
+            // Update with new image
+            const imagePath = `/Pictures/merchandise/${req.file.filename}`;
+            query = 'UPDATE merchandise SET name = $1, price = $2, image_path = $3 WHERE id = $4';
+            values = [sanitizedName, sanitizedPrice, imagePath, id];
         } else {
-            // If no new image
             query = 'UPDATE merchandise SET name = $1, price = $2 WHERE id = $3';
-            values = [name, price, id];
+            values = [sanitizedName, sanitizedPrice, id];
         }
 
         await pool.query(query, values);
         res.json({ success: true });
     } catch (error) {
-        console.error('Error updating merchandise:', error);
+        if (req.file) {
+            await fs.unlink(req.file.path).catch(console.error);
+        }
         res.status(500).json({ error: error.message });
     }
 });

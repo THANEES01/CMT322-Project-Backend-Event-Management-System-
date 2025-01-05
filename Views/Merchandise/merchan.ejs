@@ -92,37 +92,75 @@
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.4);
   }
 
-  .btn-custom-add, .btn-custom-remove {
+  .btn-add-to-cart {
+    background-color: #8B1F2F;
+    color: #ffffff;
     padding: 10px 25px;
     border-radius: 25px;
     font-weight: 600;
-    font-size: 1rem;
+    font-size: 0.9rem;
     transition: all 0.3s ease;
-    margin: 0 8px;
-    color: #fff;
-  }
+    border: 2px solid #8B1F2F;
+    width: 80%;
+    margin: 0 auto;
+}
 
-  .btn-custom-add {
-    background-color: var(--secondary-color);
-    border: 2px solid var(--secondary-color);
-  }
+.btn-add-to-cart:hover {
+    background-color: #6b1824;
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
 
-  .btn-custom-remove {
-    background-color: var(--primary-color);
-    border: 2px solid var(--primary-color);
-  }
+.card {
+    overflow: hidden;
+    background-color: #0F3460;
+    transition: transform 0.3s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
 
-  .btn-custom-add:hover {
-    background-color: var(--primary-color);
-    transform: scale(1.07);
-    color: var(--secondary-color);
-  }
+.card:hover {
+    transform: translateY(-5px);
+}
 
-  .btn-custom-remove:hover {
-    background-color: var(--secondary-color);
-    transform: scale(1.07);
-    color: var(--primary-color);
-  }
+.card-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 1.5rem;
+}
+
+.price-tag {
+    color: #ffd700;
+    font-size: 1.3rem;
+    font-weight: bold;
+    margin-bottom: 1.2rem;
+}
+
+.stock-status {
+    color: #4CAF50;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.card-img-container {
+    position: relative;
+    overflow: hidden;
+    height: 250px;
+}
+
+.card-img-top {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.card:hover .card-img-top {
+    transform: scale(1.05);
+}
 
   .error-message {
     background-color: rgba(26, 26, 26, 0.9);
@@ -170,23 +208,28 @@
         </div>
     </div>
     <div class="row">
-        <% merchandise.forEach(item => { %>
-            <div class="col-md-4 mb-4">
-                <div class="card h-100">
-                    <img src="<%= item.image_path %>" class="card-img-top" alt="<%= item.name %>">
-                    <div class="card-body text-center">
-                        <h5 class="card-title"><%= item.name %></h5>
-                        <p class="card-text">RM <%= item.price %></p>
-                        <button class="btn btn-custom-add add-to-cart-btn" 
-                                data-name="<%= item.name %>" 
-                                data-price="<%= item.price %>">+</button>
-                        <button class="btn btn-custom-remove remove-from-cart-btn" 
-                                data-name="<%= item.name %>">-</button>
-                    </div>
-                </div>
-            </div>
-        <% }); %>
-    </div>
+      <% merchandise.forEach(item => { %>
+          <div class="col-md-4 mb-4">
+              <div class="card">
+                  <div class="card-img-container">
+                      <img src="<%= item.image_path %>" class="card-img-top" alt="<%= item.name %>">
+                  </div>
+                  <div class="card-body text-center">
+                      <div>
+                          <h5 class="card-title"><%= item.name %></h5>
+                          <p class="price-tag">RM <%= item.price %></p>
+                          <p class="stock-status">In Stock</p>
+                      </div>
+                      <button class="btn btn-add-to-cart" 
+                              data-name="<%= item.name %>" 
+                              data-price="<%= item.price %>">
+                          Add to Cart
+                      </button>
+                  </div>
+              </div>
+          </div>
+      <% }); %>
+  </div>
 </div>
 
 
@@ -200,66 +243,96 @@
 
   <script>
     // Initialize cart count from localStorage
-    let cartCount = JSON.parse(localStorage.getItem('cart'))?.reduce((acc, item) => acc + item.quantity, 0) || 0;
+let cartCount = JSON.parse(localStorage.getItem('cart'))?.reduce((acc, item) => acc + item.quantity, 0) || 0;
+document.getElementById('cart-count').textContent = cartCount;
+
+function updateCartCount() {
+    const cart = JSON.parse(localStorage.getItem('cart')) || [];
+    cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
     document.getElementById('cart-count').textContent = cartCount;
+}
 
-    function addToCart(event) {
-      const button = event.target;
-      const itemName = button.getAttribute('data-name');
-      const itemPrice = parseFloat(button.getAttribute('data-price'));
+function showNotification(message, isSuccess = true) {
+    const notification = document.createElement('div');
+    notification.className = `alert ${isSuccess ? 'alert-success' : 'alert-danger'} notification`;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        border-radius: 5px;
+        z-index: 1000;
+        animation: slideIn 0.5s ease-out;
+    `;
+    notification.innerHTML = message;
+    document.body.appendChild(notification);
 
-      const cart = JSON.parse(localStorage.getItem('cart')) || [];
-      const existingItem = cart.find(item => item.name === itemName);
-      
-      if (existingItem) {
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.5s ease-in';
+        setTimeout(() => notification.remove(), 500);
+    }, 2000);
+}
+
+function addToCart(event) {
+    const button = event.currentTarget;
+    const itemName = button.getAttribute('data-name');
+    const itemPrice = parseFloat(button.getAttribute('data-price'));
+
+    // Add animation to button
+    button.style.transform = 'scale(0.95)';
+    setTimeout(() => button.style.transform = 'scale(1)', 200);
+
+    const cart = JSON.parse(localStorage.getItem('cart')) || [];
+    const existingItem = cart.find(item => item.name === itemName);
+    
+    if (existingItem) {
         existingItem.quantity += 1;
-      } else {
+    } else {
         cart.push({ name: itemName, price: itemPrice, quantity: 1 });
-      }
-
-      localStorage.setItem('cart', JSON.stringify(cart));
-      cartCount++;
-      document.getElementById('cart-count').textContent = cartCount;
-
-      alert("Item added to cart!");
     }
 
-    function removeFromCart(event) {
-      const button = event.target;
-      const itemName = button.getAttribute('data-name');
+    localStorage.setItem('cart', JSON.stringify(cart));
+    updateCartCount();
+    
+    showNotification(`${itemName} added to cart!`);
+}
 
-      let cart = JSON.parse(localStorage.getItem('cart')) || [];
-      const existingItem = cart.find(item => item.name === itemName);
-      
-      if (existingItem) {
-        if (existingItem.quantity > 1) {
-          existingItem.quantity -= 1;
-        } else {
-          cart = cart.filter(item => item.name !== itemName);
-        }
-        cartCount--;
-        document.getElementById('cart-count').textContent = cartCount;
-        localStorage.setItem('cart', JSON.stringify(cart));
-        alert("Item removed from cart!");
-      }
-    }
+// Add event listeners to buttons
+document.querySelectorAll('.btn-add-to-cart').forEach(button => {
+    button.addEventListener('click', addToCart);
+});
 
-    document.querySelectorAll('.add-to-cart-btn').forEach(button => {
-      button.addEventListener('click', addToCart);
-    });
-
-    document.querySelectorAll('.remove-from-cart-btn').forEach(button => {
-      button.addEventListener('click', removeFromCart);
-    });
-
-    document.getElementById('go-to-cart-button').addEventListener('click', function() {
-      const cart = JSON.parse(localStorage.getItem('cart')) || [];
-      if (cart.length === 0) {
+document.getElementById('go-to-cart-button').addEventListener('click', function() {
+    const cart = JSON.parse(localStorage.getItem('cart')) || [];
+    if (cart.length === 0) {
         document.getElementById('error-message').style.display = 'block';
-      } else {
-          window.location.href = '/cart';
-      }
-    });
+        setTimeout(() => {
+            document.getElementById('error-message').style.display = 'none';
+        }, 3000);
+    } else {
+        window.location.href = '/cart';
+    }
+});
+
+// Add this CSS for notifications
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+    
+    .notification {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        font-weight: 500;
+    }
+`;
+document.head.appendChild(style);
   </script>
 </body>
 

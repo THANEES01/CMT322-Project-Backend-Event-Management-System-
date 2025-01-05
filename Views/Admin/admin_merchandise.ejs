@@ -198,7 +198,9 @@
                             </div>
                             <div class="col-md-4">
                                 <label for="image" class="form-label">Image</label>
-                                <input type="file" class="form-control" id="image" name="image" accept="image/*" required>
+                                <input type="file" class="form-control" id="image" name="image" accept="image/jpeg,image/png,image/webp" required>
+                                <div id="imagePreview" class="mt-2"></div>
+                                <small class="text-muted">Maximum file size: 5MB. Allowed formats: JPEG, PNG, WebP</small>
                             </div>
                             <div class="col-12">
                                 <button type="submit" class="btn btn-primary">Add Merchandise</button>
@@ -351,176 +353,356 @@
 
     <script>
 
-        //Delete Merchandise
-        async function deleteMerchandise(id) {
-            if (confirm('Are you sure you want to delete this item?')) {
-                try {
-                    const response = await fetch(`/admin/merchandise/delete/${id}`, {
-                        method: 'DELETE'
-                    });
-                    if (response.ok) {
-                        location.reload();
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                }
-            }
+        // Global Variables
+let editModal;
+let orderModal;
+
+// Initialize modals on document load
+document.addEventListener('DOMContentLoaded', function() {
+    editModal = new bootstrap.Modal(document.getElementById('editMerchandiseModal'));
+    orderModal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
+    
+    // Initialize file input validation
+    initializeFileValidation();
+    // Initialize form validation
+    initializeFormValidation();
+});
+
+// File Validation Functions
+function initializeFileValidation() {
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    fileInputs.forEach(input => {
+        input.addEventListener('change', validateFile);
+    });
+}
+
+function validateFile(event) {
+    const file = event.target.files[0];
+    const errorElement = document.createElement('div');
+    errorElement.className = 'alert alert-danger mt-2';
+    
+    // Remove existing error messages
+    const existingError = event.target.parentNode.querySelector('.alert');
+    if (existingError) {
+        existingError.remove();
+    }
+
+    if (file) {
+        // Check file size (5MB limit)
+        if (file.size > 5 * 1024 * 1024) {
+            errorElement.textContent = 'File size must be less than 5MB';
+            event.target.value = '';
+            event.target.parentNode.appendChild(errorElement);
+            return false;
         }
 
-        //Edit Mechandise
-        let editModal;
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            errorElement.textContent = 'Only JPEG, PNG, and WebP images are allowed';
+            event.target.value = '';
+            event.target.parentNode.appendChild(errorElement);
+            return false;
+        }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            editModal = new bootstrap.Modal(document.getElementById('editMerchandiseModal'));
+        // Show image preview
+        const previewId = event.target.id === 'image' ? 'imagePreview' : 'editImagePreview';
+        showImagePreview(file, previewId);
+    }
+    return true;
+}
+
+function showImagePreview(file, previewId) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        let previewContainer = document.getElementById(previewId);
+        if (!previewContainer) {
+            previewContainer = document.createElement('div');
+            previewContainer.id = previewId;
+            previewContainer.className = 'mt-2';
+            const fileInput = document.getElementById(file.target.id);
+            fileInput.parentNode.appendChild(previewContainer);
+        }
+        previewContainer.innerHTML = `
+            <img src="${e.target.result}" class="img-fluid" style="max-height: 200px;">
+            <button type="button" class="btn btn-sm btn-danger mt-1" onclick="removePreview('${previewId}')">
+                Remove Image
+            </button>
+        `;
+    };
+    reader.readAsDataURL(file);
+}
+
+function removePreview(previewId) {
+    const previewContainer = document.getElementById(previewId);
+    if (previewContainer) {
+        previewContainer.remove();
+    }
+    // Clear the file input
+    const fileInput = document.querySelector('input[type="file"]');
+    if (fileInput) {
+        fileInput.value = '';
+    }
+}
+
+// Form Validation Functions
+function initializeFormValidation() {
+    const addForm = document.querySelector('form[action="/admin/merchandise/add"]');
+    const editForm = document.getElementById('editMerchandiseForm');
+
+    if (addForm) {
+        addForm.addEventListener('submit', validateAddForm);
+    }
+    if (editForm) {
+        editForm.addEventListener('submit', validateEditForm);
+    }
+}
+
+function validateAddForm(event) {
+    event.preventDefault();
+    
+    const name = this.querySelector('#name').value.trim();
+    const price = this.querySelector('#price').value;
+    const file = this.querySelector('#image').files[0];
+
+    const validationResult = validateFormFields(name, price, file, true);
+    if (validationResult.isValid) {
+        this.submit();
+    } else {
+        showFormErrors(this, validationResult.errors);
+    }
+}
+
+function validateEditForm(event) {
+    event.preventDefault();
+    
+    const name = document.getElementById('edit_name').value.trim();
+    const price = document.getElementById('edit_price').value;
+    const file = document.getElementById('edit_image').files[0];
+
+    const validationResult = validateFormFields(name, price, file, false);
+    if (validationResult.isValid) {
+        saveChanges();
+    } else {
+        showFormErrors(this, validationResult.errors);
+    }
+}
+
+function validateFormFields(name, price, file, isNewItem) {
+    const errors = [];
+
+    if (!name || name.length < 2) {
+        errors.push('Name must be at least 2 characters long');
+    }
+
+    if (!price || isNaN(price) || price <= 0) {
+        errors.push('Please enter a valid price greater than 0');
+    }
+
+    if (isNewItem && !file) {
+        errors.push('Please select an image');
+    }
+
+    return {
+        isValid: errors.length === 0,
+        errors: errors
+    };
+}
+
+function showFormErrors(form, errors) {
+    let errorDiv = form.querySelector('.validation-errors');
+    if (!errorDiv) {
+        errorDiv = document.createElement('div');
+        errorDiv.className = 'validation-errors alert alert-danger mt-3';
+        form.appendChild(errorDiv);
+    }
+    errorDiv.innerHTML = errors.join('<br>');
+}
+
+// Merchandise Management Functions
+async function deleteMerchandise(id) {
+    if (!confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/admin/merchandise/delete/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
         });
 
-        async function editMerchandise(id) {
-            try {
-                const response = await fetch(`/admin/merchandise/${id}`);
-                if (!response.ok) throw new Error('Failed to fetch merchandise details');
-                
-                const item = await response.json();
-                
-                document.getElementById('edit_id').value = item.id;
-                document.getElementById('edit_name').value = item.name;
-                document.getElementById('edit_price').value = item.price;
-                document.getElementById('current_image').src = item.image_path;
-                
-                editModal.show();
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error loading merchandise details');
-            }
+        if (!response.ok) {
+            throw new Error('Failed to delete merchandise');
         }
 
-        async function saveChanges() {
-            try {
-                const form = document.getElementById('editMerchandiseForm');
-                const formData = new FormData(form);
-                
-                const response = await fetch('/admin/merchandise/update', {
-                    method: 'POST',
-                    body: formData
-                });
+        location.reload();
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error deleting merchandise. Please try again.');
+    }
+}
 
-                if (!response.ok) throw new Error('Failed to update merchandise');
-                
-                location.reload();
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error updating merchandise');
-            }
+async function editMerchandise(id) {
+    try {
+        const response = await fetch(`/admin/merchandise/${id}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch merchandise details');
         }
+        
+        const item = await response.json();
+        
+        // Populate edit form
+        document.getElementById('edit_id').value = item.id;
+        document.getElementById('edit_name').value = item.name;
+        document.getElementById('edit_price').value = item.price;
+        document.getElementById('current_image').src = item.image_path;
+        
+        // Clear any existing errors and file preview
+        const errorDiv = document.querySelector('.validation-errors');
+        if (errorDiv) errorDiv.remove();
+        const previewDiv = document.getElementById('editImagePreview');
+        if (previewDiv) previewDiv.remove();
+        
+        editModal.show();
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error loading merchandise details');
+    }
+}
 
-        //View Order Details
-        let orderModal;
+async function saveChanges() {
+    const form = document.getElementById('editMerchandiseForm');
+    const formData = new FormData(form);
 
-        document.addEventListener('DOMContentLoaded', function() 
-        {
-            orderModal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
+    try {
+        const response = await fetch('/admin/merchandise/update', {
+            method: 'POST',
+            body: formData
         });
 
-        async function viewOrderDetails(orderId) {
-        try {
-            const response = await fetch(`/admin/merchandise/orders/${orderId}`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch order details');
-            }
-            const orderDetails = await response.json();
+        if (!response.ok) {
+            throw new Error('Failed to update merchandise');
+        }
 
-            // Format the content
-            const modalContent = document.getElementById('orderDetailsContent');
-            modalContent.innerHTML = `
-                <div class="container-fluid">
-                    <div class="row mb-4">
-                        <div class="col-12">
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <h6 class="card-title fw-bold">Customer Information</h6>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <p class="mb-1"><strong>Name:</strong> ${orderDetails.full_name || 'N/A'}</p>
-                                            <p class="mb-1"><strong>Matric Number:</strong> ${orderDetails.matric_number || 'N/A'}</p>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <p class="mb-1"><strong>Email:</strong> ${orderDetails.email || 'N/A'}</p>
-                                            <p class="mb-1"><strong>Phone:</strong> ${orderDetails.phone || 'N/A'}</p>
-                                        </div>
-                                    </div>
+        const result = await response.json();
+        if (result.success) {
+            location.reload();
+        } else {
+            throw new Error(result.error || 'Update failed');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error updating merchandise: ' + error.message);
+    }
+}
+
+// Order Management Functions
+async function viewOrderDetails(orderId) {
+    try {
+        const response = await fetch(`/admin/merchandise/orders/${orderId}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch order details');
+        }
+        const orderDetails = await response.json();
+
+        const modalContent = document.getElementById('orderDetailsContent');
+        modalContent.innerHTML = generateOrderDetailsHTML(orderDetails);
+        orderModal.show();
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error loading order details. Please try again.');
+    }
+}
+
+function generateOrderDetailsHTML(orderDetails) {
+    return `
+        <div class="container-fluid">
+            <!-- Customer Information -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title fw-bold">Customer Information</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Name:</strong> ${orderDetails.full_name || 'N/A'}</p>
+                                    <p class="mb-1"><strong>Matric Number:</strong> ${orderDetails.matric_number || 'N/A'}</p>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row mb-4">
-                        <div class="col-12">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h6 class="card-title fw-bold">Order Information</h6>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <p class="mb-1"><strong>Order ID:</strong> #${orderDetails.id}</p>
-                                            <p class="mb-1"><strong>Order Date:</strong> ${new Date(orderDetails.created_at).toLocaleString()}</p>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <p class="mb-1"><strong>Transaction ID:</strong> ${orderDetails.transaction_id || 'N/A'}</p>
-                                            <p class="mb-1"><strong>Payment Status:</strong> 
-                                                <span class="badge ${orderDetails.payment_status === 'completed' ? 'bg-success' : 'bg-warning'}">
-                                                    ${orderDetails.payment_status || 'N/A'}
-                                                </span>
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h6 class="card-title fw-bold">Ordered Items</h6>
-                                    <div class="table-responsive">
-                                        <table class="table table-striped">
-                                            <thead>
-                                                <tr>
-                                                    <th>Item</th>
-                                                    <th class="text-center">Quantity</th>
-                                                    <th class="text-end">Unit Price</th>
-                                                    <th class="text-end">Subtotal</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                ${orderDetails.items.map(item => `
-                                                    <tr>
-                                                        <td>${item.name}</td>
-                                                        <td class="text-center">${item.quantity}</td>
-                                                        <td class="text-end">RM${Number(item.price).toFixed(2)}</td>
-                                                        <td class="text-end">RM${Number(item.subtotal).toFixed(2)}</td>
-                                                    </tr>
-                                                `).join('')}
-                                                <tr class="table-active fw-bold">
-                                                    <td colspan="3" class="text-end">Total Amount:</td>
-                                                    <td class="text-end">RM${Number(orderDetails.total_amount).toFixed(2)}</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Email:</strong> ${orderDetails.email || 'N/A'}</p>
+                                    <p class="mb-1"><strong>Phone:</strong> ${orderDetails.phone || 'N/A'}</p>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            `;
+            </div>
 
-            // Show the modal
-            orderModal.show();
+            <!-- Order Information -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title fw-bold">Order Information</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Order ID:</strong> #${orderDetails.id}</p>
+                                    <p class="mb-1"><strong>Order Date:</strong> ${new Date(orderDetails.created_at).toLocaleString()}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Transaction ID:</strong> ${orderDetails.transaction_id || 'N/A'}</p>
+                                    <p class="mb-1"><strong>Payment Status:</strong> 
+                                        <span class="badge ${orderDetails.payment_status === 'completed' ? 'bg-success' : 'bg-warning'}">
+                                            ${orderDetails.payment_status || 'N/A'}
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error loading order details. Please try again.');
-            }
+            <!-- Ordered Items -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title fw-bold">Ordered Items</h6>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Item</th>
+                                            <th class="text-center">Quantity</th>
+                                            <th class="text-end">Unit Price</th>
+                                            <th class="text-end">Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${orderDetails.items.map(item => `
+                                            <tr>
+                                                <td>${item.name}</td>
+                                                <td class="text-center">${item.quantity}</td>
+                                                <td class="text-end">RM${Number(item.price).toFixed(2)}</td>
+                                                <td class="text-end">RM${Number(item.subtotal).toFixed(2)}</td>
+                                            </tr>
+                                        `).join('')}
+                                        <tr class="table-active fw-bold">
+                                            <td colspan="3" class="text-end">Total Amount:</td>
+                                            <td class="text-end">RM${Number(orderDetails.total_amount).toFixed(2)}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
 }
     </script>
 
