@@ -150,6 +150,8 @@ app.use(session({
     }
 }));
 
+const path = require('path');
+
 // Set EJS as the view engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));

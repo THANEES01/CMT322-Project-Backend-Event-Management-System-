@@ -25,20 +25,15 @@ const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: {
       rejectUnauthorized: false
-    }
+    },
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
   });
   
-  // Test connection
-  const testConnection = async () => {
-    try {
-      const client = await pool.connect();
-      console.log('Database connected successfully.');
-      client.release();
-    } catch (err) {
-      console.error('Database connection error:', err);
-    }
-  };
-  
-  testConnection();
+  // Add error handling
+  pool.on('error', (err) => {
+    console.error('Unexpected error on idle client', err);
+  });
   
   module.exports = pool;
