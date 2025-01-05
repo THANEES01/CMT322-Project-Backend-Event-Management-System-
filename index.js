@@ -20,7 +20,7 @@ const __dirname = path.dirname(__filename);
 
 // Secure File Upload Configuration
 // Allowed file types and size
-const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 
@@ -149,8 +149,6 @@ app.use(session({
         sameSite: 'strict'                 // CSRF protection
     }
 }));
-
-const path = require('path');
 
 // Set EJS as the view engine
 app.set('view engine', 'ejs');
