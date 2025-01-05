@@ -1,6 +1,8 @@
 // db.js
-import pkg from 'pg';
-const { Pool } = pkg;
+// import pkg from 'pg';
+// const { Pool } = pkg;
+
+const { Pool } = require('pg');
 
 // const pool = new Pool({
 //     user: 'postgres',
@@ -36,4 +38,4 @@ const pool = new Pool({
     console.error('Unexpected error on idle client', err);
   });
   
-  export default pool;  
+  module.exports = pool;

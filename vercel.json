@@ -8,12 +8,12 @@
     ],
     "routes": [
       {
-        "src": "/Pictures/(.*)",
-        "dest": "/Public/Pictures/$1"
+        "src": "/Public/(.*)",
+        "dest": "/Public/$1"
       },
       {
         "src": "/(.*)",
-        "dest": "index.js"
+        "dest": "/index.js"
       }
     ]
   }

@@ -1,22 +1,33 @@
 //index.js
-import * as dotenv from 'dotenv';
-import express from 'express';
-import Stripe from 'stripe';
-import pool from './db.js';
-import { fileURLToPath } from 'url';
-//for login (session management)
-import session from 'express-session';
-import rateLimit from 'express-rate-limit'; //Import rate limit package
-// Secure File Upload Configuration
-import multer from 'multer';
-import path from 'path';
-import crypto from 'crypto';
-import fs from 'fs/promises';
+// import * as dotenv from 'dotenv';
+// import express from 'express';
+// import Stripe from 'stripe';
+// import pool from './db.js';
+// import { fileURLToPath } from 'url';
+// //for login (session management)
+// import session from 'express-session';
+// import rateLimit from 'express-rate-limit'; //Import rate limit package
+// // Secure File Upload Configuration
+// import multer from 'multer';
+// import path from 'path';
+// import crypto from 'crypto';
+// import fs from 'fs/promises';
+
+const dotenv = require('dotenv');
+const express = require('express');
+const Stripe = require('stripe');
+const pool = require('./db');
+const session = require('express-session');
+const rateLimit = require('express-rate-limit');
+const multer = require('multer');
+const path = require('path');
+const crypto = require('crypto');
+const fs = require('fs').promises;
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// const __filename = fileURLToPath(import.meta.url);
+// const __dirname = path.dirname(__filename);
 
 // Secure File Upload Configuration
 // Allowed file types and size
