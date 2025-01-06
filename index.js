@@ -23,6 +23,7 @@ const multer = require('multer');
 const path = require('path');
 const crypto = require('crypto');
 const fs = require('fs').promises;
+const cloudinary = require('cloudinary').v2;
 
 dotenv.config();
 
@@ -30,56 +31,63 @@ dotenv.config();
 // const __dirname = path.dirname(__filename);
 
 // Secure File Upload Configuration
-// Allowed file types and size
+// Secure File Upload Configuration
+
+// Add this near your other middleware setup
+const uploadDir = path.join(__dirname, 'Public', 'Pictures', 'merchandise');
+fs.mkdir(uploadDir, { recursive: true }).catch(console.error);
+
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
+// Storage configuration based on environment
+const isProduction = process.env.NODE_ENV === 'production';
 
-// Multer configuration
-const storage = multer.diskStorage({
-    destination: async (req, file, cb) => {
-        const uploadDir = 'public/Pictures/merchandise';
-        try {
-            await fs.access(uploadDir);
-        } catch {
-            await fs.mkdir(uploadDir, { recursive: true });
+const storage = isProduction 
+    ? multer.memoryStorage() // Use memory storage for production
+    : multer.diskStorage({   // Use disk storage for local development
+          destination: (req, file, cb) => {
+              const uploadDir = path.join(process.cwd(), 'Public', 'Pictures', 'merchandise');
+              cb(null, uploadDir);
+          },
+          filename: (req, file, cb) => {
+              const randomName = crypto.randomBytes(16).toString('hex');
+              const fileExt = path.extname(file.originalname).toLowerCase();
+              cb(null, `${randomName}${fileExt}`);
+          }
+    });
+
+    const upload = multer({
+        storage,
+        limits: { fileSize: MAX_FILE_SIZE },
+        fileFilter: (req, file, cb) => {
+            if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+                cb(new Error('Invalid file type'), false);
+                return;
+            }
+            cb(null, true);
         }
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        // Generate random filename with original extension
-        const randomName = crypto.randomBytes(32).toString('hex');
-        const fileExt = path.extname(file.originalname).toLowerCase();
-        cb(null, `${randomName}${fileExt}`);
-    }
-});
+    });
 
 // File filter function
 const fileFilter = (req, file, cb) => {
-    // Check MIME type
     if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
         cb(new Error('Invalid file type. Only JPEG, PNG, and WebP images are allowed.'), false);
         return;
     }
-
-    // Check original filename for security
-    const sanitizedFilename = path.basename(file.originalname).replace(/[^a-zA-Z0-9.-]/g, '');
-    if (sanitizedFilename !== file.originalname) {
-        cb(new Error('Invalid filename characters'), false);
-        return;
-    }
-
     cb(null, true);
 };
 
-// Configure multer with security settings
-const upload = multer({
-    storage: storage,
-    fileFilter: fileFilter,
-    limits: {
-        fileSize: MAX_FILE_SIZE,
-        files: 1
-    }
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Add this to verify configuration on startup
+console.log('Cloudinary Configuration Status:', {
+    isConfigured: !!cloudinary.config().cloud_name,
+    cloudName: cloudinary.config().cloud_name
 });
 
 // Middleware for file validation
@@ -89,19 +97,22 @@ const validateImage = async (req, res, next) => {
     }
 
     try {
-        // Additional security checks can be added here
-        const fileBuffer = await fs.readFile(req.file.path);
-        const fileSignature = fileBuffer.toString('hex', 0, 4);
+        let fileBuffer;
+        if (isProduction) {
+            fileBuffer = req.file.buffer;
+        } else {
+            fileBuffer = await fs.readFile(req.file.path);
+        }
 
-        // Check file signatures (magic numbers)
+        const fileSignature = fileBuffer.toString('hex', 0, 4);
         const validSignatures = {
-            'ffd8ffe0': 'image/jpeg', // JPEG
-            '89504e47': 'image/png',  // PNG
-            '52494646': 'image/webp'  // WebP
+            'ffd8ffe0': 'image/jpeg',
+            '89504e47': 'image/png',
+            '52494646': 'image/webp'
         };
 
         let isValidSignature = false;
-        for (let [signature, mimeType] of Object.entries(validSignatures)) {
+        for (let signature of Object.keys(validSignatures)) {
             if (fileBuffer.toString('hex', 0, 4).includes(signature)) {
                 isValidSignature = true;
                 break;
@@ -109,7 +120,9 @@ const validateImage = async (req, res, next) => {
         }
 
         if (!isValidSignature) {
-            await fs.unlink(req.file.path);
+            if (!isProduction && req.file.path) {
+                await fs.unlink(req.file.path);
+            }
             throw new Error('Invalid file content');
         }
 
@@ -153,23 +166,29 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: { 
-        secure: process.env.NODE_ENV === 'production',
+        // secure: process.env.NODE_ENV === 'production',
+        secure: false,
         httpOnly: true,                    // Prevents client-side JS access
-        // maxAge: 24 * 60 * 60 * 1000,       // Session expires in 24 hours
-        maxAge: 1 * 60 * 1000,          // For testing, session expires in 1 minute
-        sameSite: 'strict'                 // CSRF protection
-    }
+        maxAge: 24 * 60 * 60 * 1000,       // Session expires in 24 hours
+        // maxAge: 1 * 60 * 1000,          // For testing, session expires in 1 minute
+        sameSite: 'lax'                 // CSRF protection
+    },
+    name: 'adminSession' // Add unique session name
 }));
 
+app.set('views', path.join(__dirname, 'Views'));
 // Set EJS as the view engine
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
 
 // Serve static files
-app.use(express.static('Public')); // Notice the capital 'P' to match your folder structure
+// app.use(express.static('Public')); // Notice the capital 'P' to match your folder structure
+app.use(express.static('Public'));
+app.use('/Public', express.static(path.join(__dirname, 'Public')));
+// Replace your current static serving with this
+// app.use('/Public', express.static(path.join(__dirname, 'Public')));
+// app.use(express.static(path.join(__dirname, 'Public')));
 
 // Admin Login and Logout
-
 // Predefined admin credentials
 const ADMIN_CREDENTIALS = {
     username: 'admin',
@@ -183,15 +202,19 @@ app.get('/admin/login', (req, res) => {
     if (req.session.adminId) {
         return res.redirect('/admin/adminpage');
     }
-    res.render('admin/login');
+    res.render('Admin/login');
 });
 
 // Admin login route
 app.post('/admin/login', loginLimiter, (req, res) => {
+    console.log('Received login request:', {
+        body: req.body,
+        headers: req.headers,
+        session: req.session
+    });
+    
     const { username, password } = req.body;
     
-    console.log('Login attempt:', { username }); // Log username but not password for security
-
     if (username === ADMIN_CREDENTIALS.username && 
         password === ADMIN_CREDENTIALS.password) {
         
@@ -199,37 +222,46 @@ app.post('/admin/login', loginLimiter, (req, res) => {
         req.session.adminId = 1;
         req.session.username = username;
 
-        res.json({
+        console.log('Login successful, session:', req.session);
+
+        return res.json({
             success: true,
-            redirect: '/admin/adminpage'
+            redirect: '/admin/adminpage',
+            message: 'Login successful'
         });
     } else {
-        // Calculate attempts remaining
-        const attemptsRemaining = Math.max(
-            0, 
-            2 - (req.rateLimit ? req.rateLimit.current : 0)
-        );
-
-        res.status(401).json({
+        console.log('Login failed - invalid credentials');
+        return res.status(401).json({
             success: false,
-            message: 'Invalid credentials. Please try again.',
-            attemptsRemaining: attemptsRemaining,
-            retryAfter: attemptsRemaining === 0 ? 60 : null // 60 seconds if no attempts left
+            message: 'Invalid credentials'
         });
+        // const attemptsRemaining = Math.max(
+        //     0, 
+        //     2 - (req.rateLimit ? req.rateLimit.current : 0)
+        // );
+
+        // res.status(401).json({
+        //     success: false,
+        //     message: 'Invalid credentials',
+        //     attemptsRemaining
+        // });
     }
 });
 
 // Admin logout
 app.get('/admin/logout', (req, res) => {
     req.session.destroy();
-    res.redirect('/admin/login');
+    res.redirect('/Admin/login');
 });
 
 // Middleware to protect admin routes
 const requireAdmin = (req, res, next) => {
+    console.log('Session:', req.session); // Add debugging
     if (!req.session.adminId) {
+        console.log('No admin session found');
         return res.redirect('/admin/login');
     }
+    console.log('Admin session found');
     next();
 };
 
@@ -270,7 +302,7 @@ app.get('/', (req, res) => {
 
 // Participant routes
 app.get('/registration', (req, res) => {
-  res.render('participant/registration');
+  res.render('Participant/registration');
 });
 
 //Handle post request submisson for participant registration
@@ -401,7 +433,7 @@ app.get('/participant/payment', async (req, res) => {
         });
 
         // Render payment page
-        res.render('participant/payment', {
+        res.render('Participant/payment', {
             registrationId,
             teamName: registration.team_name,
             leaderName: registration.full_name,
@@ -455,7 +487,7 @@ app.get('/participant/payment-success', async (req, res) => {
             );
 
             // Render success page
-            res.render('participant/p_payment_success', {
+            res.render('Participant/p_payment_success', {
                 registrationId,
                 teamName: registrationResult.rows[0].team_name,
                 category: registrationResult.rows[0].category,
@@ -475,7 +507,7 @@ app.get('/participant/payment-success', async (req, res) => {
 
 app.get('/participant/payment-failed', (req, res) => {
     const errorMessage = req.query.error || 'An unexpected error occurred during payment processing.';
-    res.render('participant/p_payment-failed', {
+    res.render('Participant/p_payment-failed', {
         error: errorMessage
     });
 });
@@ -654,7 +686,7 @@ app.get('/admin/adminpage', async (req, res) => {
              ORDER BY pr.registration_date DESC`
         );
 
-        res.render('admin/adminpage', {
+        res.render('Admin/adminpage', {
             individualRegistrations: individualRegistrations.rows,
             groupRegistrations: groupRegistrations.rows
         });
@@ -720,7 +752,7 @@ app.get('/admin/audience', async (req, res) => {
         );
 
         // Change this line to match your file name
-        res.render('admin/audience_management', {  // Changed from audience-management to audience_management
+        res.render('Admin/audience_management', {  // Changed from audience-management to audience_management
             audiences: audienceResult.rows
         });
     } catch (error) {
@@ -753,10 +785,29 @@ app.get('/admin/audience/:id', async (req, res) => {
 // Admin merchandise management routes
 app.get('/admin/merchandise', async (req, res) => {
     try {
-        // Get merchandise items
-        const merchandiseResult = await pool.query(
-            'SELECT * FROM merchandise ORDER BY id DESC'
-        );
+        // Get merchandise items with proper image path handling
+        const merchandiseResult = await pool.query(`
+            SELECT 
+                id,
+                name,
+                price,
+                image_path,
+                created_at
+            FROM merchandise 
+            ORDER BY id DESC
+        `);
+
+        console.log('Raw merchandise data:', merchandiseResult.rows);
+
+        // Map over results to ensure proper image paths
+        const processedMerchandise = merchandiseResult.rows.map(item => ({
+            ...item,
+            image_path: item.image_path.startsWith('http') 
+                ? item.image_path  // Cloudinary URL
+                : `/Public/Pictures/merchandise/${item.image_path}` // Local path
+        }));
+
+        console.log('Processed merchandise:', processedMerchandise[0]);
 
         // Get all orders with their items
         const ordersResult = await pool.query(`
@@ -767,7 +818,8 @@ app.get('/admin/merchandise', async (req, res) => {
                         'name', m.name,
                         'quantity', mi.quantity,
                         'price', mi.price_per_unit,
-                        'subtotal', mi.price_per_unit * mi.quantity
+                        'subtotal', mi.price_per_unit * mi.quantity,
+                        'image_path', m.image_path
                     )
                 ) as items
             FROM merch_orders mo
@@ -784,21 +836,24 @@ app.get('/admin/merchandise', async (req, res) => {
             ORDER BY mo.created_at DESC
         `);
 
-        // Check if orders exist and handle null values
+        // Process orders and their items
         let orders = [];
         if (ordersResult.rows.length > 0) {
             orders = ordersResult.rows.map(order => ({
                 ...order,
-                items: order.items[0] === null ? [] : order.items
+                items: order.items[0] === null ? [] : order.items.map(item => ({
+                    ...item,
+                    image_path: item.image_path?.startsWith('http')
+                        ? item.image_path
+                        : `/Public/Pictures/merchandise/${item.image_path}`
+                }))
             }));
         }
 
-        // Console log for debugging
-        console.log('Orders data:', orders);
+        console.log('Processed orders:', orders[0]);
 
-        // Render the template with both merchandise and orders data
-        res.render('admin/admin_merchandise', {
-            merchandise: merchandiseResult.rows,
+        res.render('Admin/admin_merchandise', {
+            merchandise: processedMerchandise,
             orders: orders,
             title: 'Merchandise Management'
         });
@@ -827,7 +882,8 @@ app.get('/admin/merchandise/orders/:id', async (req, res) => {
                             'name', m.name,
                             'quantity', mi.quantity,
                             'price', mi.price_per_unit,
-                            'subtotal', mi.quantity * mi.price_per_unit
+                            'subtotal', mi.quantity * mi.price_per_unit,
+                            'image_path', m.image_path
                         )
                     ) FILTER (WHERE m.id IS NOT NULL), 
                     '[]'
@@ -844,9 +900,16 @@ app.get('/admin/merchandise/orders/:id', async (req, res) => {
             return res.status(404).json({ error: 'Order not found' });
         }
 
-        const order = orderResult.rows[0];
-        // Ensure items is never null
-        order.items = order.items || [];
+        // Process order images
+        const order = {
+            ...orderResult.rows[0],
+            items: orderResult.rows[0].items.map(item => ({
+                ...item,
+                image_path: item.image_path?.startsWith('http')
+                    ? item.image_path
+                    : `/Public/Pictures/merchandise/${item.image_path}`
+            }))
+        };
 
         res.json(order);
     } catch (error) {
@@ -856,41 +919,74 @@ app.get('/admin/merchandise/orders/:id', async (req, res) => {
 });
 
 // Handle merchandise image upload and creation
-app.post('/admin/merchandise/add', upload.single('image'),  validateImage, async (req, res) => {
+app.post('/admin/merchandise/add', upload.single('image'), async (req, res) => {
     try {
+        console.log('Starting add merchandise process');
+        console.log('Request body:', req.body);
+        console.log('File details:', req.file);
+
         const { name, price } = req.body;
 
-        // Validate input
         if (!name || !price || !req.file) {
             throw new Error('Missing required fields');
         }
 
-        // Sanitize inputs
-        const sanitizedName = name.trim().replace(/[<>]/g, '');
-        const sanitizedPrice = parseFloat(price);
+        let imagePath;
+        if (isProduction) {
+            try {
+                console.log('Preparing Cloudinary upload...');
+                // Convert the file buffer to base64
+                const fileBuffer = req.file.buffer || await fs.readFile(req.file.path);
+                const fileStr = `data:${req.file.mimetype};base64,${fileBuffer.toString('base64')}`;
+                
+                console.log('Uploading to Cloudinary...');
+                const cloudinaryResult = await cloudinary.uploader.upload(fileStr, {
+                    folder: 'merchandise',
+                    resource_type: 'auto'
+                });
+                console.log('Cloudinary upload success:', cloudinaryResult.secure_url);
+                imagePath = cloudinaryResult.secure_url;
+            } catch (cloudinaryError) {
+                console.error('Detailed Cloudinary error:', cloudinaryError);
+                throw new Error('Failed to upload image to Cloudinary');
+            }
+        } else {
+            // Local development: Save to disk
+            const randomName = crypto.randomBytes(16).toString('hex');
+            const fileExt = path.extname(req.file.originalname).toLowerCase();
+            const fileName = `${randomName}${fileExt}`;
+            imagePath = `/Public/Pictures/merchandise/${fileName}`;
 
-        // Generate secure file path
-        const imagePath = `/Pictures/merchandise/${req.file.filename}`;
+            const uploadDir = path.join(process.cwd(), 'Public', 'Pictures', 'merchandise');
+            try {
+                await fs.mkdir(uploadDir, { recursive: true });
+                await fs.writeFile(
+                    path.join(uploadDir, fileName),
+                    req.file.buffer || await fs.readFile(req.file.path)
+                );
+            } catch (fileError) {
+                console.error('File system error:', fileError);
+                throw new Error('Failed to save image file');
+            }
+        }
 
-        // Save to database using parameterized query
-        await pool.query(
-            'INSERT INTO merchandise (name, price, image_path) VALUES ($1, $2, $3)',
-            [sanitizedName, sanitizedPrice, imagePath]
+        // Save to database
+        const result = await pool.query(
+            'INSERT INTO merchandise (name, price, image_path) VALUES ($1, $2, $3) RETURNING *',
+            [name, price, imagePath]
         );
 
+        console.log('Successfully added merchandise:', result.rows[0]);
         res.redirect('/admin/merchandise');
     } catch (error) {
-        // Clean up uploaded file if database operation fails
-        if (req.file) {
-            await fs.unlink(req.file.path).catch(console.error);
-        }
+        console.error('Error adding merchandise:', error);
         res.status(500).render('error', {
             message: 'Error adding merchandise',
-            error: error.message
+            error: error.toString(),
+            details: error.stack
         });
     }
-}
-);
+});
 
 // Get single merchandise details
 app.get('/admin/merchandise/:id', async (req, res) => {
@@ -917,31 +1013,54 @@ app.post('/admin/merchandise/update', upload.single('image'), validateImage, asy
     try {
         const { id, name, price } = req.body;
 
-        // Validate input
         if (!id || !name || !price) {
             throw new Error('Missing required fields');
         }
 
-        // Sanitize inputs
         const sanitizedName = name.trim().replace(/[<>]/g, '');
         const sanitizedPrice = parseFloat(price);
 
         let query, values;
 
         if (req.file) {
-            // Get old image path
+            // Get old image details
             const oldImageResult = await pool.query(
                 'SELECT image_path FROM merchandise WHERE id = $1',
                 [id]
             );
 
-            if (oldImageResult.rows.length > 0) {
-                const oldImagePath = path.join('public', oldImageResult.rows[0].image_path);
-                await fs.unlink(oldImagePath).catch(console.error);
+            let imagePath;
+            if (isProduction) {
+                // Delete old image from Cloudinary if exists
+                if (oldImageResult.rows[0]?.image_path) {
+                    const oldPublicId = oldImageResult.rows[0].image_path.split('/').pop().split('.')[0];
+                    await cloudinary.uploader.destroy(`merchandise/${oldPublicId}`);
+                }
+
+                // Upload new image to Cloudinary
+                const cloudinaryResult = await cloudinary.uploader.upload(req.file.path, {
+                    folder: 'merchandise',
+                });
+                imagePath = cloudinaryResult.secure_url;
+            } else {
+                // Local development: Handle file system
+                if (oldImageResult.rows[0]?.image_path) {
+                    const oldImagePath = path.join('public', oldImageResult.rows[0].image_path);
+                    await fs.unlink(oldImagePath).catch(console.error);
+                }
+
+                const randomName = crypto.randomBytes(16).toString('hex');
+                const fileExt = path.extname(req.file.originalname).toLowerCase();
+                const fileName = `${randomName}${fileExt}`;
+                imagePath = `/Public/Pictures/merchandise/${fileName}`;
+
+                const uploadDir = path.join(process.cwd(), 'Public', 'Pictures', 'merchandise');
+                await fs.writeFile(
+                    path.join(uploadDir, fileName),
+                    req.file.buffer || await fs.readFile(req.file.path)
+                );
             }
 
-            // Update with new image
-            const imagePath = `/Pictures/merchandise/${req.file.filename}`;
             query = 'UPDATE merchandise SET name = $1, price = $2, image_path = $3 WHERE id = $4';
             values = [sanitizedName, sanitizedPrice, imagePath, id];
         } else {
@@ -952,21 +1071,56 @@ app.post('/admin/merchandise/update', upload.single('image'), validateImage, asy
         await pool.query(query, values);
         res.json({ success: true });
     } catch (error) {
-        if (req.file) {
-            await fs.unlink(req.file.path).catch(console.error);
-        }
+        console.error('Update error:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
 // Delete merchandise item in admin page
 app.delete('/admin/merchandise/delete/:id', async (req, res) => {
+    const client = await pool.connect();
     try {
-        await pool.query('DELETE FROM merchandise WHERE id = $1', [req.params.id]);
+        await client.query('BEGIN');
+
+        // Get merchandise details for image deletion
+        const merchandiseResult = await client.query(
+            'SELECT image_path FROM merchandise WHERE id = $1',
+            [req.params.id]
+        );
+
+        // Delete related order items
+        await client.query(
+            'DELETE FROM merch_order_items WHERE merchandise_id = $1',
+            [req.params.id]
+        );
+
+        // Delete merchandise record
+        await client.query(
+            'DELETE FROM merchandise WHERE id = $1',
+            [req.params.id]
+        );
+
+        // Handle image deletion
+        if (merchandiseResult.rows[0]?.image_path) {
+            if (isProduction) {
+                // Delete from Cloudinary
+                const publicId = merchandiseResult.rows[0].image_path.split('/').pop().split('.')[0];
+                await cloudinary.uploader.destroy(`merchandise/${publicId}`);
+            } else {
+                // Delete from local filesystem
+                const imagePath = path.join('public', merchandiseResult.rows[0].image_path);
+                await fs.unlink(imagePath).catch(console.error);
+            }
+        }
+
+        await client.query('COMMIT');
         res.json({ success: true });
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error('Error deleting merchandise:', error);
-        res.status(500).json({ success: false });
+        res.status(500).json({ success: false, error: error.message });
+    } finally {
+        client.release();
     }
 });
 
@@ -993,7 +1147,7 @@ app.get('/cart', async (req, res) => {
         // Get merchandise data for image mapping
         const merchandiseResult = await pool.query('SELECT * FROM merchandise');
 
-        res.render('merchandise/cart', {
+        res.render('Merchandise/cart', {
             merchandiseData: JSON.stringify(merchandiseResult.rows),
             title: 'Shopping Cart - Kalakshetra 6.0'
         });
@@ -1143,7 +1297,7 @@ app.get('/merchandise/payment/:orderId', async (req, res) => {
         }
 
         // Render the payment page with order details
-        res.render('merchandise/payment', {
+        res.render('Merchandise/payment', {
             order: order,
             stripePublicKey: process.env.STRIPE_PUBLIC_KEY,
             clientSecret: paymentIntent.client_secret,
@@ -1205,7 +1359,7 @@ app.get('/merchandise/payment-success', async (req, res) => {
             // Clear the cart after successful payment
             res.clearCookie('cart');
             
-            res.render('merchandise/order_confirmation', {
+            res.render('Merchandise/order_confirmation', {
                 order: order,
                 title: 'Order Confirmation - Kalakshetra 6.0'
             });
@@ -1251,6 +1405,15 @@ app.use((req, res) => {
     });
 });
 
+// Add this before your routes
+app.use((req, res, next) => {
+    console.log('Incoming request:', {
+        url: req.url,
+        method: req.method,
+        path: req.path
+    });
+    next();
+});
 
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);

@@ -120,7 +120,94 @@
     </div>
 
     <script>
-       document.getElementById('loginForm').addEventListener('submit', async (e) => {
+//       document.getElementById('loginForm').addEventListener('submit', async (e) => {
+//     e.preventDefault();
+    
+//     const credentials = {
+//         username: document.getElementById('username').value,
+//         password: document.getElementById('password').value
+//     };
+
+//     const errorMessageElement = document.getElementById('error-message');
+//     const loginForm = document.getElementById('loginForm');
+//     const submitButton = loginForm.querySelector('button[type="submit"]');
+
+//     try {
+//         // Add credentials: 'include' for session handling
+//         const response = await fetch('/admin/login', {
+//             method: 'POST',
+//             headers: {
+//                 'Content-Type': 'application/json'
+//             },
+//             body: JSON.stringify(credentials),
+//             credentials: 'include' // Add this line
+//         });
+
+//         const data = await response.json();
+//         console.log('Login response:', data); // Add debugging
+
+//         if (response.status === 429) {
+//             // Rate limit exceeded
+//             errorMessageElement.innerHTML = `
+//                 <div class="alert alert-danger">
+//                     ${data.message}<br/>
+//                 </div>
+//             `;
+//             submitButton.disabled = true;
+            
+//             setTimeout(() => {
+//                 submitButton.disabled = false;
+//                 errorMessageElement.innerHTML = `
+//                     <div class="alert alert-info">
+//                         You can try logging in again now.
+//                     </div>
+//                 `;
+//             }, 60000);
+
+//         } else if (response.status === 401) {
+//             // Invalid credentials
+//             let message = data.message;
+//             if (data.attemptsRemaining > 0) {
+//                 message += ` You have ${data.attemptsRemaining} attempt${data.attemptsRemaining === 1 ? '' : 's'} remaining.`;
+//             }
+            
+//             errorMessageElement.innerHTML = `
+//                 <div class="alert alert-warning">
+//                     ${message}
+//                 </div>
+//             `;
+            
+//             document.getElementById('password').value = '';
+//             document.getElementById('password').focus();
+
+//         } else if (data.success) {
+//             // Successful login - use window.location.replace for better redirect
+//             console.log('Redirecting to:', data.redirect); // Add debugging
+//             window.location.replace(data.redirect);
+//         }
+//     } catch (error) {
+//         console.error('Login error:', error);
+//         errorMessageElement.innerHTML = `
+//             <div class="alert alert-danger">
+//                 An error occurred. Please try again.
+//             </div>
+//         `;
+//     }
+// });
+
+// // Add error tracking
+// window.onerror = function(msg, url, lineNo, columnNo, error) {
+//     console.log('Error:', {
+//         message: msg,
+//         url: url,
+//         line: lineNo,
+//         column: columnNo,
+//         error: error
+//     });
+//     return false;
+// };
+
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const credentials = {
@@ -129,59 +216,32 @@
     };
 
     const errorMessageElement = document.getElementById('error-message');
-    const loginForm = document.getElementById('loginForm');
-    const submitButton = loginForm.querySelector('button[type="submit"]');
 
     try {
-        const response = await fetch('/admin/login', {
+        // Get the current domain
+        const currentDomain = window.location.origin;
+        
+        const response = await fetch(`${currentDomain}/admin/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(credentials)
+            body: JSON.stringify(credentials),
+            credentials: 'same-origin'
         });
 
         const data = await response.json();
+        console.log('Response:', data);
 
-        if (response.status === 429) {
-            // Rate limit exceeded
-            errorMessageElement.innerHTML = `
-                <div class="alert alert-danger">
-                    ${data.message}<br/>
-                </div>
-            `;
-            submitButton.disabled = true;
-            
-            // Re-enable the form after 1 minute
-            setTimeout(() => {
-                submitButton.disabled = false;
-                errorMessageElement.innerHTML = `
-                    <div class="alert alert-info">
-                        You can try logging in again now.
-                    </div>
-                `;
-            }, 60000);
-
-        } else if (response.status === 401) {
-            // Invalid credentials
-            let message = data.message;
-            if (data.attemptsRemaining > 0) {
-                message += ` You have ${data.attemptsRemaining} attempt${data.attemptsRemaining === 1 ? '' : 's'} remaining.`;
-            }
-            
+        if (data.success) {
+            // Use the current domain for redirect
+            window.location.href = `${currentDomain}${data.redirect}`;
+        } else {
             errorMessageElement.innerHTML = `
                 <div class="alert alert-warning">
-                    ${message}
+                    ${data.message}
                 </div>
             `;
-            
-            // Clear the password field but keep the username
-            document.getElementById('password').value = '';
-            document.getElementById('password').focus();
-
-        } else if (data.success) {
-            // Successful login
-            window.location.href = data.redirect;
         }
     } catch (error) {
         console.error('Login error:', error);

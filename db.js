@@ -28,8 +28,12 @@ if (process.env.NODE_ENV === 'production') {
     });
 }
 
+pool.on('connect', () => {
+    console.log('Database connected successfully');
+});
+
 pool.on('error', (err) => {
-    console.error('Unexpected error on idle client', err);
+    console.error('Database connection error:', err);
 });
 
 module.exports = pool;

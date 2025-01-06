@@ -198,9 +198,9 @@
                             </div>
                             <div class="col-md-4">
                                 <label for="image" class="form-label">Image</label>
-                                <input type="file" class="form-control" id="image" name="image" accept="image/jpeg,image/png,image/webp" required>
-                                <div id="imagePreview" class="mt-2"></div>
-                                <small class="text-muted">Maximum file size: 5MB. Allowed formats: JPEG, PNG, WebP</small>
+                            <input type="file" class="form-control" id="image" name="image" accept="image/jpeg,image/png,image/webp" required>
+                            <div id="imagePreview" class="mt-2"></div>
+                            <small class="text-muted">Maximum file size: 5MB. Allowed formats: JPEG, PNG, WebP</small>
                             </div>
                             <div class="col-12">
                                 <button type="submit" class="btn btn-primary">Add Merchandise</button>
@@ -228,8 +228,12 @@
                                 <tbody>
                                     <% merchandise.forEach(item => { %>
                                         <tr>
-                                            <td>
-                                                <img src="<%= item.image_path %>" alt="<%= item.name %>" class="img-fluid">
+                                            <td>           
+                                                <img src="<%= item.image_path %>" 
+                                                alt="<%= item.name %>" 
+                                                style="max-width: 100px; height: auto;"
+                                                onerror="handleImageError(this)"
+                                                class="merchandise-image">
                                             </td>
                                             <td><%= item.name %></td>
                                             <td>RM <%= item.price %></td>
@@ -703,6 +707,12 @@ function generateOrderDetailsHTML(orderDetails) {
             </div>
         </div>
     `;
+}
+
+function handleImageError(img) {
+    console.error('Failed to load image:', img.src);
+    img.src = '/Public/Pictures/placeholder.jpg';
+    img.onerror = null; // Prevent infinite loop
 }
     </script>
 

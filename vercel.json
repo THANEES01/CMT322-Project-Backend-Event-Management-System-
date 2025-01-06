@@ -6,14 +6,20 @@
         "use": "@vercel/node"
       }
     ],
-    "routes": [
-      {
-        "src": "/Public/(.*)",
-        "dest": "/Public/$1"
-      },
-      {
-        "src": "/(.*)",
-        "dest": "/index.js"
+   "routes": [
+    {
+      "src": "/Public/Pictures/merchandise(.*)",
+      "dest": "/Public/Pictures/merchandise/$1",
+      "headers": {
+        "cache-control": "public, max-age=0, must-revalidate"
       }
-    ]
+    },
+    {
+      "src": "/(.*)",
+      "dest": "index.js"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
   }
+}
